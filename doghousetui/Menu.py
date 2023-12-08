@@ -2,7 +2,7 @@ from valid8 import validate
 from typeguard import typechecked
 from dataclasses import field, InitVar, dataclass
 from validation.regex import pattern
-from typing import Callable,Any
+from typing import Callable, Any, Dict, Optional
 
 
 @typechecked
@@ -47,3 +47,56 @@ class MenuEntry:
     def create(key: str, description: str, on_selected: Callable[[], None]=lambda: None, is_exit: bool=False) -> 'MenuEntry':
         return MenuEntry(Key(key), Description(description), on_selected, is_exit, MenuEntry.__create_key)
 
+
+@typechecked
+@dataclass(frozen=True)
+class Menu:
+    description: Description
+    __key2entry: Dict[Key, MenuEntry] = field(default_factory=dict, repr=False, init=False)
+    create_key: InitVar[Any] = field(default='it must be Builder.__create_key')
+
+
+    def __post_init__(self, create_key: Any):
+        validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
+
+    def _add_entry(self, value: MenuEntry, create_key: Any) -> None:
+        validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
+        validate('value.key', value.key, custom=lambda v: v not in self.__key2entry)
+        self.__key2entry[value.key] = value
+
+    def _contains_exit(self):
+        return any(list(filter(lambda v: v.is_exit, self.__key2entry.values())))
+
+    def __print(self) -> None:
+        length = len(str(self.description))
+        fmt = '***{}{}{}***'
+        print(fmt.format('*', '*' * length, '*'))
+        print(fmt.format(' ', self.description.value, ' '))
+        print(fmt.format('*', '*' * length, '*'))
+        for k,v in self.__key2entry:
+            print(f'{k}:\t{v.description}')
+
+    @typechecked
+    @dataclass()
+    class Builder:
+        __menu: Optional['Menu']
+        __create_key = object()
+
+        def __init__(self, description: Description):
+            self.__menu = Menu(description, self.__create_key)
+
+        @staticmethod
+        def is_valid_key(key: Any) -> bool:
+            return key == Menu.Builder.__create_key
+
+        def with_entry(self, value: MenuEntry) -> 'Menu.Builder':
+            validate('menu', self.__menu)
+            self.__menu._add_entry(value, self.__create_key)
+            return self
+
+        def build(self) -> 'Menu':
+            validate('menu', self.__menu)
+            validate('menu.entries', self.__menu._contains_exit(), equals=True)
+            res, self.__menu = self.__menu, None
+            return res
+        

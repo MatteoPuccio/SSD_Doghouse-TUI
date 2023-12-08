@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import patch, call, Mock
 from valid8 import ValidationError
-from doghousetui.Menu import Description, Key, MenuEntry
+
+from doghousetui.Menu import Description, Key, MenuEntry, Menu
 
 
 def test_description_length_1000_chars():
@@ -89,6 +90,40 @@ def test_menu_entry_must_be_create_by_create_method():
     MenuEntry.create("0", "description", on_selected())
 
 
+@pytest.fixture
+def menu_entry():
+    return MenuEntry.create("1", "description")
+@pytest.fixture
+def exit_menu_entry():
+    return MenuEntry.create("0", "description", is_exit=True)
+
+def test_menu_builder_cannot_create_empty_menu():
+    menu_builder = Menu.Builder(Description('a description'))
+    with pytest.raises(ValidationError):
+        menu_builder.build()
 
 
+def test_menu_builder_cannot_create_menu_with_no_exit(menu_entry):
+    menu_builder = Menu.Builder(Description('a description'))
+    menu_builder.with_entry(menu_entry)
+    with pytest.raises(ValidationError):
+        menu_builder.build()
+
+def test_menu_builder_cannot_create_menu_with_duplicate_entries(menu_entry):
+    menu_builder = Menu.Builder(Description('a description'))
+    menu_builder.with_entry(menu_entry)
+    with pytest.raises(ValidationError):
+        menu_builder.with_entry(menu_entry)
+
+def test_menu_builder_create_menu_with__exit(exit_menu_entry):
+    menu_builder = Menu.Builder(Description('a description'))
+    menu_builder.with_entry(exit_menu_entry)
+    menu_builder.build()
+
+def test_menu_builder_cannot_call_two_times_build():
+    menu_builder = Menu.Builder(Description('a description'))
+    menu_builder.with_entry(MenuEntry.create('0', 'description', is_exit=True))
+    menu_builder.build()
+    with pytest.raises(ValidationError):
+        menu_builder.build()
 

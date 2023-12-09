@@ -9,6 +9,7 @@ python = "^3.10"
 valid8 = "^5.1.2"
 pytest = "^7.4.3"
 typeguard = "^4.1.5"
+coverage = "^7.3.2"
 
 [tool.poetry.dev-dependencies]
 

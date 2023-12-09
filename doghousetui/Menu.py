@@ -73,8 +73,26 @@ class Menu:
         print(fmt.format('*', '*' * length, '*'))
         print(fmt.format(' ', self.description.value, ' '))
         print(fmt.format('*', '*' * length, '*'))
-        for k,v in self.__key2entry:
+        for k, v in self.__key2entry.items():
             print(f'{k}:\t{v.description}')
+
+    def __select_from_input(self) -> bool:
+        while True:
+            try:
+                line = input("? ")
+                key = Key(line.strip())
+                entry = self.__key2entry[key]
+                entry.on_selected()
+                return entry.is_exit
+            except (KeyError, TypeError, ValueError):
+                print('Invalid selection. Please, try again...')
+
+    def run(self) -> None:
+        while True:
+            self.__print()
+            is_exit = self.__select_from_input()
+            if is_exit:
+                return
 
     @typechecked
     @dataclass()

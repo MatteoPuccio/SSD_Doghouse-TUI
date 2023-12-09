@@ -127,3 +127,34 @@ def test_menu_builder_cannot_call_two_times_build():
     with pytest.raises(ValidationError):
         menu_builder.build()
 
+@pytest.fixture
+def two_entries_menu():
+    menu_builder = Menu.Builder(Description('a description'))
+    menu_builder.with_entry(MenuEntry.create('0', 'entry 1', is_exit=True, on_selected=lambda : print("entry 1 selected")))
+    menu_builder.with_entry(MenuEntry.create('1', 'entry 2', is_exit=False, on_selected=lambda: print("Bye!")))
+    return menu_builder.build()
+
+
+@patch('builtins.input', side_effect=['1', '0'])
+@patch('builtins.print')
+def test_menu_selection_call_on_selected(mocked_print, mocked_input, two_entries_menu):
+    menu = Menu.Builder(Description('a description'))\
+        .with_entry(MenuEntry.create('1', 'first entry', on_selected=lambda: print('first entry selected')))\
+        .with_entry(MenuEntry.create('0', 'exit', is_exit=True))\
+        .build()
+    menu.run()
+    mocked_print.assert_any_call('first entry selected')
+    mocked_input.assert_called()
+
+
+@patch('builtins.input', side_effect=['-1', '0'])
+@patch('builtins.print')
+def test_menu_selection_on_wrong_key(mocked_print, mocked_input):
+    menu = Menu.Builder(Description('a description'))\
+        .with_entry(MenuEntry.create('1', 'first entry', on_selected=lambda: print('first entry selected')))\
+        .with_entry(MenuEntry.create('0', 'exit', is_exit=True, on_selected=lambda : print('Bye!')))\
+        .build()
+    menu.run()
+    mocked_print.assert_any_call('Invalid selection. Please, try again...')
+    mocked_print.assert_any_call('Bye!')
+    mocked_input.assert_called()

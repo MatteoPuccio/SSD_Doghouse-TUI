@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, call, Mock
 from valid8 import ValidationError
 
+
 from doghousetui.Menu import Description, Key, MenuEntry, Menu
 
 
@@ -152,9 +153,10 @@ def test_menu_selection_call_on_selected(mocked_print, mocked_input, two_entries
 def test_menu_selection_on_wrong_key(mocked_print, mocked_input):
     menu = Menu.Builder(Description('a description'))\
         .with_entry(MenuEntry.create('1', 'first entry', on_selected=lambda: print('first entry selected')))\
-        .with_entry(MenuEntry.create('0', 'exit', is_exit=True, on_selected=lambda : print('Bye!')))\
+        .with_entry(MenuEntry.create('0', 'exit', is_exit=True, on_selected=lambda: print('Bye!')))\
         .build()
     menu.run()
     mocked_print.assert_any_call('Invalid selection. Please, try again...')
     mocked_print.assert_any_call('Bye!')
     mocked_input.assert_called()
+

@@ -18,7 +18,7 @@ class Description:
 
 
 @typechecked
-@dataclass(order=True, frozen=True)
+@dataclass(order=True, frozen=True, eq=True)
 class Key:
     value: str
 
@@ -79,13 +79,14 @@ class Menu:
     def __select_from_input(self) -> bool:
         while True:
             try:
-                line = input("? ")
+                line: str = input(" ")
                 key = Key(line.strip())
                 entry = self.__key2entry[key]
                 entry.on_selected()
                 return entry.is_exit
             except (KeyError, TypeError, ValueError):
                 print('Invalid selection. Please, try again...')
+
 
     def run(self) -> None:
         while True:

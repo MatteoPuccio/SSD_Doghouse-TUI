@@ -62,21 +62,28 @@ class App:
 
 
     @staticmethod
-    def login_request( username: str, password: str) :
+    def login_request( username: str, password: str) -> Response:
         return requests.post(Utils.API_SERVER_LOGIN, params={"username": username, "password": password})
 
-    def __login_parse_response(self, response:Response,username) :
+    def __login_parse_response(self, response: Response, username: str):
+
         if 200 == response.status_code:
+
             json_response = response.json()
             try:
-                self.__token = Token(json_response["response"]["session_token"])
-            except ValidationError:
+                pass
+                self.__token = Token(json_response["session_token"])
+            except (ValidationError):
                 print(Utils.INVALID_CREDENTIALS)
+                return
+            except (ConnectionError):
+                print(Utils.CONNECTION_ERROR)
                 return
             print(Utils.LOGGED_IN_MESSAGE % (username))
             self.__logged_user_menu.run()
         else:
             print(Utils.SERVER_ERROR_STATUS_CODE % (response.status_code, "log in"))
+
     def __login(self):
         try:
             username: str = self.__read_username()
@@ -86,10 +93,12 @@ class App:
         try:
             password: str = self.__read_password()
         except ValidationError:
-            print('Invalid password')
+            print(Utils.INVALID_PASSWORD_ERROR)
             return
-        response:Response = App.login_request(username, password)
-        self.__login_parse_response(self, response, username)
+
+        response: Response = App.login_request(username, password)
+
+        self.__login_parse_response( response, username)
 
 
     def __logout(self):

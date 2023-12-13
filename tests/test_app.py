@@ -77,13 +77,13 @@ def test_app_read_password_receives_invalid_password_fails_show_message_do_not_c
 def test_app_valid_credentials_print_logged_in_message(mocked_print, valid_passwords, valid_usernames):
     for i in range(0, len(valid_usernames)):
 
-        with patch('builtins.input', side_effect=['1', valid_usernames[i], valid_passwords[i], '0']):
+        with patch('builtins.input', side_effect=['1', valid_usernames[i], valid_passwords[i], '0', '0']):
             with patch.object(doghousetui.App.App, 'login_request') as mocked_post:
                 app: App = App()
-                response= Response()
-                response.status_code = 200
-                response._content = b'{ "key" : "key value" }'
-                mocked_post.side_effect=response
+                response = Mock(status_code = 200)
+                response.json.return_value = { "session_token" : "asd8g8asf9af89d9gas9f8gsjabhka123445ywef"}
+                mocked_post.return_value = response
+
                 app.run()
                 calls = []
                 for call in mocked_print.call_args_list:

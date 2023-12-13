@@ -28,6 +28,7 @@ LOGGED_IN_MESSAGE = 'Logged in as %s'
 SERVER_ERROR_STATUS_CODE = 'ERROR %d, failed to %s'
 INVALID_USERNAME_ERROR="Invalid username"
 INVALID_PASSWORD_ERROR="Invalid password"
+CONNECTION_ERROR="Unable to contact server"
 
 
 

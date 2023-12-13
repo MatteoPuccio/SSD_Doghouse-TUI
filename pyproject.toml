@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "doghouse-tui"
+name = "doghousetui"
 version = "0.1.0"
 description = ""
 authors = ["bfrancesco <brunofrancescobarbara@gmail.com>"]

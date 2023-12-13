@@ -15,7 +15,6 @@ class Token:
     __value: str = field(default=Utils.DEFAULT_TOKEN_VALUE, repr=False)
 
     def __post_init__(self):
-        print(self.__value)
         validate('token value', self.__value, min_len=40, max_len=40, custom= pattern(r'[0-9a-z]+'))
 
     @property

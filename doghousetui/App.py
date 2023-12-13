@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from requests import Response
 from typeguard import typechecked
 from valid8 import validate, ValidationError
 from doghousetui import Utils
@@ -56,33 +57,40 @@ class App:
 
     def __read_password(self) -> str:
         password: str = input("Insert password: ")
-        validate("login password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!\?@]"))
+        validate("login password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
         return password
 
+
+    @staticmethod
+    def login_request( username: str, password: str) :
+        return requests.post(Utils.API_SERVER_LOGIN, params={"username": username, "password": password})
+
+    def __login_parse_response(self, response:Response,username) :
+        if 200 == response.status_code:
+            json_response = response.json()
+            try:
+                self.__token = Token(json_response["response"]["session_token"])
+            except ValidationError:
+                print(Utils.INVALID_CREDENTIALS)
+                return
+            print(Utils.LOGGED_IN_MESSAGE % (username))
+            self.__logged_user_menu.run()
+        else:
+            print(Utils.SERVER_ERROR_STATUS_CODE % (response.status_code, "log in"))
     def __login(self):
         try:
-            # self.__app_status.login()
-            try:
-                username: str = self.read_username()
-            except ValidationError:
-                print('Invalid username')
-                return
-            try:
-                password: str = self.__read_password()
-            except ValidationError:
-                print('Invalid password')
-                return
-            response = requests.get(Utils.API_SERVER_LOGIN, params={"username": username, "password": password})
-            if 200 == response.status_code:
-                json_response = response.json()
-                self.__token = Token(json_response["response"]["session_token"])
-                self.__logged_user_menu.run()
-                # self.__app_status =
-            else:
-                pass
-                # handle_error(response.status_code())
-        except AttributeError:
-            print("We had an error while logging in")
+            username: str = self.__read_username()
+        except ValidationError:
+            print(Utils.INVALID_USERNAME_ERROR)
+            return
+        try:
+            password: str = self.__read_password()
+        except ValidationError:
+            print('Invalid password')
+            return
+        response:Response = App.login_request(username, password)
+        self.__login_parse_response(self, response, username)
+
 
     def __logout(self):
         pass
@@ -144,7 +152,6 @@ class AppStatus:
 
     def login(self):
         validate(self.__login_status, custom=lambda v: v == AppStatus.LoginStatus.NOT_LOGGED)
-
     def logout(self):
         validate(self.__login_status, custom=lambda v: v != AppStatus.LoginStatus.NOT_LOGGED)
 

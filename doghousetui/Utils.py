@@ -24,6 +24,14 @@ REMOVE_DOG_ENTRY='remove dog'
 EXIT_MESSAGE = 'Bye!'
 LOGOUT_MESSAGE = 'Logged out'
 
+LOGGED_IN_MESSAGE = 'Logged in as %s'
+SERVER_ERROR_STATUS_CODE = 'ERROR %d, failed to %s'
+INVALID_USERNAME_ERROR="Invalid username"
+INVALID_PASSWORD_ERROR="Invalid password"
+
+
+
+INVALID_CREDENTIALS="Invalid credentials, please try again"
 
 DEFAULT_TOKEN_VALUE='notloggedtoken00000000000000000000000000'
 

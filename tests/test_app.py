@@ -12,11 +12,26 @@ from doghousetui import Utils
 from doghousetui.App import App
 
 
+
 # @patch('builtins.input', side_effect=['1', 'username', 'password'])
 # @patch('builtins.print')
 # def test_menu_login_success():
 #    app = App()
 #    app.run()
+
+@pytest.fixture
+def valid_username():
+    return 'user22'
+
+@pytest.fixture
+def valid_password():
+    return '123###78'
+
+@pytest.fixture
+def valid_token():
+    return 'asd8g8asf9af89d9gas9f8gsjabhka123445ywef'
+
+
 @pytest.fixture
 def invalid_usernames():
     return ['a', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'abcs#?', 'localhost@hi']
@@ -33,6 +48,15 @@ def valid_passwords():
 @pytest.fixture
 def invalid_passwords():
     return["aaaaaaa","12?3###78", "PASSWORDASAASD@@@ASD'AS", "a!aaasasdasdasdas9as89a8989a98a"]
+
+
+def mocked_return_args_partial_contains_string(mocked_print:Mock, target:str):
+    for call in mocked_print.call_args_list:
+        args, kwargs = call
+        for a in args:
+            if target in a:
+                return True
+    return False
 
 @mock.patch('builtins.print')
 @mock.patch('requests.post')
@@ -60,17 +84,13 @@ def test_app_read_username_receives_valid_username_and_password_call_post_reques
 
 @mock.patch('builtins.print')
 @mock.patch('requests.post')
-def test_app_read_password_receives_invalid_password_fails_show_message_do_not_call_post(mocked_post, mocked_print, invalid_passwords, valid_usernames):
+def test_app_read_password_receives_invalid_password_fails_show_message_and_do_not_call_post(mocked_post, mocked_print, invalid_passwords, valid_usernames):
     for password in invalid_passwords:
         app: App = App()
         with patch('builtins.input', side_effect=['1', valid_usernames[0], password,  '0']):
             app.run()
             calls = []
-            for call in mocked_print.call_args_list:
-                args, kwargs = call
-                for a in args:
-                    calls.append(a)
-            assert Utils.INVALID_PASSWORD_ERROR in calls
+            mocked_print.assert_any_call(Utils.INVALID_PASSWORD_ERROR)
             mocked_post.assert_not_called()
 
 @mock.patch("builtins.print")
@@ -83,12 +103,65 @@ def test_app_valid_credentials_print_logged_in_message(mocked_print, valid_passw
                 response = Mock(status_code = 200)
                 response.json.return_value = { "session_token" : "asd8g8asf9af89d9gas9f8gsjabhka123445ywef"}
                 mocked_post.return_value = response
-
                 app.run()
-                calls = []
-                for call in mocked_print.call_args_list:
-                    args, kwargs = call
-                    for a in args:
-                        calls.append(a)
-                assert Utils.LOGGED_IN_MESSAGE % (valid_usernames[i]) in calls
+                mocked_print.assert_any_call(Utils.LOGGED_IN_MESSAGE%valid_usernames[i])
 
+
+
+@mock.patch("builtins.print")
+def test_continue_without_login_prints_not_logged_user_menu(mocked_print):
+    with patch('builtins.input', side_effect=['2', '0', '0']):
+        app: App = App()
+        app.run()
+        calls = []
+        printed: bool = False
+        for call in mocked_print.call_args_list:
+            args, kwargs = call
+            for a in args:
+                calls.append(a)
+                if Utils.NOT_LOGGED_MENU_DESCRIPTION in a:
+                    printed = True
+                    break
+        assert printed
+
+# @mock.patch("builtins.print")
+# def test_app_login_valid_credentials_unable_to_contact_server_throws_connection_error(mocked_print, valid_password, valid_username):
+#     with patch('builtins.input', side_effect=['1', valid_username, valid_password, '0']):
+#         with patch.object(doghousetui.App.App, 'login_request') as mocked_post:
+#             app: App = App()
+#             mocked_post.side_effect = ConnectionError("test")
+#             app.run()
+#             mocked_print.assert_any_call(Utils.CONNECTION_ERROR)
+#
+#
+# @mock.patch("builtins.print")
+# def test_app_login_valid_user_credentials_show_user_menu(mocked_print, valid_passwords, valid_usernames):
+#     with patch('builtins.input', side_effect=['1', valid_usernames[0], valid_passwords[0], '0', '0']):
+#         with mock.patch.object(doghousetui.App.App, 'login_request') as mocked_post:
+#             app: App = App()
+#             response = Mock(status_code=200)
+#             response.json.return_value = {"session_token": "asd8g8asf9af89d9gas9f8gsjabhka123445ywef", "role": "user"}
+#             mocked_post.return_value = response
+#             app.run()
+#             assert mocked_return_args_partial_contains_string(mocked_print, Utils.USER_MENU_DESCRIPTION)
+
+
+
+
+# @mock.patch("builtins.print")
+# def test_app_logout_erases_token():
+#     with patch('builtins.input', side_effect=['1', valid_username, valid_password, '0', '0']):
+
+
+
+
+#@mock.patch("builtins.print")
+#def test_continue_without_login_for_logged_user_raises_error(mocked_print):
+
+#def test_app_logout(valid_username, valid_password, valid_token):
+#    with patch('App.App.token', valid_token):
+#        with patch('App.App.')
+
+#@mock.patch("builtins.print")
+#def test_app_logout(mocked_print, valid_usernames, valid_passwords):
+#    with patch('builtins.input', side_effect=['1', valid_usernames[0], valid_passwords[0]]):

@@ -1,0 +1,6 @@
+.idea
+.pytest_cache
+tests/.pytest_cache
+doghousetui/__pycache__/
+tests/__pycache__/
+validation/__pycache__/

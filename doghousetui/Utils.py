@@ -39,7 +39,7 @@ INVALID_CREDENTIALS = "Invalid credentials, please try again"
 
 DEFAULT_TOKEN_VALUE = 'notloggedtoken00000000000000000000000000'
 
-PATH_TO_BREED_JSON = ''
+PATH_TO_BREED_JSON = 'resources/dogs_breeds.json'
 INVALID_BREED = 'The selected breed is not among the valid ones'
 
 RESPONSE_ROLE_KEY = "role"

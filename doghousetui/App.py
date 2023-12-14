@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from requests import Response
 from typeguard import typechecked
+from urllib3.exceptions import NewConnectionError
 from valid8 import validate, ValidationError
 from doghousetui import Utils
 from doghousetui.Menu import Menu, Description, MenuEntry
@@ -18,12 +19,13 @@ class App:
     # menu
     def __init__(self):
         self.__token = Token()
+        self.__running = True
         #self.__app_status = AppStatus()
         self.__login_menu = Menu.Builder(Description(Utils.LOGIN_MENU_DESCRIPTION)) \
-            .with_entry(MenuEntry.create('1', Utils.LOGIN_ENTRY, on_selected=lambda: self.__login())) \
+            .with_entry(MenuEntry.create('1', Utils.LOGIN_ENTRY, is_exit=True, on_selected=lambda: self.__login())) \
             .with_entry(
-            MenuEntry.create('2', Utils.CONTINUE_WITHOUT_LOGIN_ENTRY, on_selected=self.__continue_without_login)) \
-            .with_entry(MenuEntry.create('3', Utils.REGISTER_ENTRY, on_selected=self.__register)) \
+            MenuEntry.create('2', Utils.CONTINUE_WITHOUT_LOGIN_ENTRY, is_exit=True, on_selected=lambda: self.__continue_without_login())) \
+            .with_entry(MenuEntry.create('3', Utils.REGISTER_ENTRY, on_selected=lambda: self.__register())) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
@@ -34,7 +36,9 @@ class App:
             .with_entry(MenuEntry.create('3', Utils.ADD_PREFERENCE_ENTRY, on_selected=self.__add_preference)) \
             .with_entry(MenuEntry.create('4', Utils.REMOVE_PREFERENCE_ENTRY, on_selected=self.__remove_preference)) \
             .with_entry(
-            MenuEntry.create('0', Utils.LOGOUT_ENTRY, is_exit=True, on_selected= lambda: self.__logout())) \
+            MenuEntry.create('5', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
+            .with_entry(
+            MenuEntry.create('0', Utils.LOGOUT_ENTRY, is_exit=True, on_selected= lambda: self.__close_app())) \
             .build()
 
         self.__logged_admin_menu = Menu.Builder(Description(Utils.ADMIN_MENU_DESCRIPTION)) \
@@ -42,23 +46,29 @@ class App:
             .with_entry(MenuEntry.create('2', Utils.ADD_DOG_ENTRY, on_selected=self.__add_dog)) \
             .with_entry(MenuEntry.create('3', Utils.REMOVE_DOG_ENTRY, on_selected=self.__remove_dog)) \
             .with_entry(
-            MenuEntry.create('0', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
-            .build()
-
-        self.__not_logged_menu = Menu.Builder(Description('generic user Menu')) \
-            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=self.__show_dogs)) \
+            MenuEntry.create('4', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
 
-    def __read_username(self) -> str:
-        username:str = input("Insert username: ")
-        validate("login username", username, min_len=2, max_len=30, custom=pattern(r"[a-zA-Z0-9]*"))
+        self.__not_logged_menu = Menu.Builder(Description(Utils.GENERIC_USER_MENU_DESCRIPTION)) \
+            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=self.__show_dogs)) \
+            .with_entry(
+            MenuEntry.create('2', Utils.BACK_TO_LOGIN_MENU_ENTRY, is_exit=True, on_selected=lambda: self.__back_to_login_menu())) \
+            .with_entry(
+            MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
+            .build()
+
+        self.__current_menu: Menu = self.__login_menu
+
+    def __read_username(self, message) -> str:
+        username: str = input(message)
+        validate("validation username", username, min_len=2, max_len=30, custom=pattern(r"[a-zA-Z0-9]*"))
         return username
 
-    def __read_password(self) -> str:
-        password: str = input("Insert password: ")
-        validate("login password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
+    def __read_password(self, message) -> str:
+        password: str = input(message)
+        validate("validaton password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
         return password
 
     def login_request(self, username: str, password: str) -> Response:
@@ -79,20 +89,22 @@ class App:
                 return
             print(Utils.LOGGED_IN_MESSAGE % (username))
             if json_response[Utils.RESPONSE_ROLE_KEY] == Utils.RESPONSE_USER_ROLE_USER_VALUE:
-                self.__logged_user_menu.run()
+                self.__current_menu = self.__logged_user_menu
             elif json_response[Utils.RESPONSE_ROLE_KEY] == Utils.RESPONSE_USER_ROLE_ADMIN_VALUE:
-                self.__logged_admin_menu.run()
+                self.__current_menu = self.__logged_admin_menu
+            else:
+                print(Utils.LOGIN_ERROR)
         else:
             print(Utils.LOGIN_ERROR)
 
     def __login(self):
         try:
-            username: str = self.__read_username()
+            username: str = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
         except ValidationError:
             print(Utils.INVALID_USERNAME_ERROR)
             return
         try:
-            password: str = self.__read_password()
+            password: str = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
         except ValidationError:
             print(Utils.INVALID_PASSWORD_ERROR)
             return
@@ -102,7 +114,7 @@ class App:
             print(Utils.CONNECTION_ERROR)
             return
 
-        self.__login_parse_response( response, username)
+        self.__login_parse_response(response, username)
 
 
     def __logout(self):
@@ -110,23 +122,68 @@ class App:
             #self.__app_status.logout()
             self.__token = Utils.DEFAULT_TOKEN_VALUE
             response: Response = self.logout_request()
-            print(Utils.LOGOUT_MESSAGE)
+            if 200 == response.status_code:
+                print(Utils.LOGOUT_MESSAGE)
+                self.__back_to_login_menu()
+            else:
+                print(Utils.LOGOUT_ERROR)
         except ConnectionError:
             print(Utils.CONNECTION_ERROR)
 
     def __continue_without_login(self):
-        try:
-            #self.__app_status.continue_without_login()
-            self.__not_logged_menu.run()
-        except ValidationError:
-            print(Utils.LOGOUT_WITHOUT_FIRST_LOGIN)
+        self.__current_menu = self.__not_logged_menu
+
+    def __read_registration_data(self) -> tuple:
+        invalid: bool = True
+        username:str = ''
+        password1:str = ''
+        password2:str = ''
+        while invalid:
+            invalid = False
+            try:
+                username: str = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
+            except ValidationError:
+                print(Utils.INVALID_USERNAME_ERROR)
+                invalid = True
+                continue
+            try:
+                password1: str = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
+            except ValidationError:
+                print(Utils.INVALID_PASSWORD_ERROR)
+                invalid = True
+                continue
+            try:
+                password2: str = self.__read_password(Utils.REPEAT_PASSWORD_MESSAGE)
+                if password1 != password2:
+                    print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
+                    invalid = True
+            except ValidationError:
+                invalid = True
+            return username, password1
+
+
+    def make_registration_request(self, username: str, password: str) -> Response:
+        return requests.post(Utils.API_SERVER_REGISTER, params={"username": username, "password": password})
 
     def __register(self):
+        try:
+            username, password = self.__read_registration_data()
+        except Exception as e:
+            print(e.args)
+            return
+        try:
+            response: Response = self.make_registration_request(username, password)
+        except NewConnectionError:
+            print(Utils.CONNECTION_ERROR)
+            return
+        except Exception as e:
+            print(e.args)
+            return
 
-        # print("Insert username: ")
-        # print("Insert password: ")
-        pass
-
+        if response.status_code == 200:
+            self.__back_to_login_menu()
+        else:
+            print(Utils.REGISTRATION_ERROR)
 
     def __show_dogs(self):
         pass
@@ -146,11 +203,20 @@ class App:
     def __remove_preference(self):
         pass
 
+    def __back_to_login_menu(self):
+        self.__current_menu = self.__login_menu
+
     def __close_app(self):
         print(Utils.EXIT_MESSAGE)
+        self.__running = False
 
     def run(self):
-        self.__login_menu.run()
+        while self.__running:
+            self.__current_menu.run()
+            print(str(self.__running))
+            if not self.__running:
+                break
+
 
 
 # @typechecked

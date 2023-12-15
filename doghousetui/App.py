@@ -8,7 +8,7 @@ from valid8 import validate, ValidationError
 from doghousetui import Utils
 from doghousetui.Menu import Menu, Description, MenuEntry
 from enum import Enum
-from getpass import getpass
+import getpass
 from doghousetui.Token import Token
 import requests
 
@@ -67,7 +67,7 @@ class App:
         return username
 
     def __read_password(self, message) -> str:
-        password: str = input(message)
+        password: str = getpass.getpass(message)
         validate("validaton password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
         return password
 
@@ -110,7 +110,8 @@ class App:
             return
         try:
             response: Response = self.login_request(username, password)
-        except ConnectionError:
+            #print("Hello", response.status_code)
+        except Exception as e:
             print(Utils.CONNECTION_ERROR)
             return
 
@@ -169,7 +170,7 @@ class App:
         try:
             username, password = self.__read_registration_data()
         except Exception as e:
-            print(e.args)
+            #print(e.args)
             return
         try:
             response: Response = self.make_registration_request(username, password)
@@ -177,7 +178,7 @@ class App:
             print(Utils.CONNECTION_ERROR)
             return
         except Exception as e:
-            print(e.args)
+            #print(e.args)
             return
 
         if response.status_code == 200:
@@ -195,8 +196,8 @@ class App:
         pass
 
     def __add_dog(self):
+        #print(Utils.REQUIRE_INPUT_DOG_DATA)
         pass
-
     def __remove_dog(self):
         pass
 
@@ -213,7 +214,7 @@ class App:
     def run(self):
         while self.__running:
             self.__current_menu.run()
-            print(str(self.__running))
+            #print(str(self.__running))
             if not self.__running:
                 break
 
@@ -254,7 +255,7 @@ class App:
 #     def is_logged_as_user(self):
 #         return self.__login_status == AppStatus.LoginStatus.USER
 
-    
+
 
 def main(name: str):
     if name == '__main__':

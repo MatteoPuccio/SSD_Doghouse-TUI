@@ -1,6 +1,8 @@
 from valid8 import validate
 from typeguard import typechecked
 from dataclasses import field, InitVar, dataclass
+
+from doghousetui import Utils
 from validation.regex import pattern
 from typing import Callable, Any, Dict, Optional
 
@@ -85,7 +87,7 @@ class Menu:
                 entry.on_selected()
                 return entry.is_exit
             except (KeyError, TypeError, ValueError):
-                print('Invalid selection. Please, try again...')
+                print(Utils.INVALID_MENU_SELECTION)
 
 
     def run(self) -> None:

@@ -1,8 +1,10 @@
 
-API_SERVER = 'http://127.0.0.1/api/v1'
-API_SERVER_LOGIN = API_SERVER+"/auth/login"
-API_SERVER_LOGOUT = API_SERVER+"/auth/logout"
-API_SERVER_REGISTER = API_SERVER+"/auth/register"
+API_SERVER = 'http://127.0.0.1:8000/api/v1'
+API_SERVER_PORT = 8000
+API_SERVER_LOGIN = API_SERVER+"/auth/login/"
+API_SERVER_LOGIN_ROLE = API_SERVER+"/role/"
+API_SERVER_LOGOUT = API_SERVER+"/auth/logout/"
+API_SERVER_REGISTER = API_SERVER+"/auth/registration/"
 
 LOGIN_MENU_DESCRIPTION = 'DOGHOUSE Login'
 LOGIN_ENTRY = 'login'
@@ -32,7 +34,7 @@ SERVER_ERROR_STATUS_CODE = 'ERROR %d, failed to %s'
 INVALID_USERNAME_ERROR="Invalid username"
 INVALID_PASSWORD_ERROR="Invalid password"
 CONNECTION_ERROR="Unable to contact server"
-LOGIN_ERROR = 'Incorrect credentials, please retry with correct credentials'
+LOGIN_ERROR = 'We were unable to log you in'
 LOGOUT_ERROR = 'Unable to logout'
 REGISTRATION_ERROR = 'We were unable to register your account'
 INVALID_CREDENTIALS = "Invalid credentials, please try again"
@@ -44,9 +46,15 @@ INVALID_BREED = 'The selected breed is not among the valid ones'
 
 RESPONSE_ROLE_KEY = "role"
 RESPONSE_USER_ROLE_USER_VALUE = "user"
-RESPONSE_USER_ROLE_ADMIN_VALUE = "admin"
+RESPONSE_USER_ROLE_ADMIN_VALUE = "doghouse-worker"
 INSERT_USERNAME_MESSAGE = 'insert username: '
 INSERT_PASSWORD_MESSAGE = 'insert password: '
 REPEAT_PASSWORD_MESSAGE = 'Repeat password: '
 REGISTRATION_PASSWORDS_DO_NOT_COINCIDE = 'The passwords do not coincide'
 
+LOGIN_ERROR_SERVER_RESPONSE_JSON_KEY = 'non_field_errors'
+
+REGISTRATION_SUCCEEDED_MESSAGE = 'We have correctly registered your account, you are now able to login'
+INVALID_MENU_SELECTION = 'Invalid selection. Please, try again...'
+
+DATE_WRONG_FORMAT_MESSAGE = 'Expected iso format string'

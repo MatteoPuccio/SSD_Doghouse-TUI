@@ -19,10 +19,10 @@ from validation.regex import pattern
 @typechecked
 @dataclass(order=True, frozen=True)
 class Dogname:
-    __value: str = field(default="Unnamed")
+    __value: str = field(default="")
 
     def __post_init__(self):
-        validate("Dog name", self.value, min_len=2, max_len=50, custom=pattern(r"[A-Z][a-z]+"))
+        validate("Dog name", self.value, min_len=0, max_len=50, custom=pattern(r"([A-Z][a-z]+)?"))
 
     @property
     def value(self):
@@ -116,11 +116,11 @@ class DogDescription:
 @typechecked
 @dataclass(order=True, frozen=True)
 class EstimatedAdultSize:
-    value: Optional[str] = field(default="Unknown")
+    value: Optional[str]
 
     def __post_init__(self):
-        validate("size validation", self.value, min_len=1, max_len=7,
-                 custom=lambda v: v in ["XS", "S", "M", "L", "XL", "Unknown"])
+        validate("size validation", self.value, min_len=0, max_len=7,
+                 custom=lambda v: v in ["XS", "S", "M", "L", "XL"])
 
 
 @typechecked
@@ -145,10 +145,10 @@ class DogId:
 @typechecked
 @dataclass(frozen=True)
 class DogBirthInfo:
-    name: Dogname
     breed: Breed
     sex: Sex
     birth_date: Date
+    estimated_adult_size : EstimatedAdultSize
     create_key: InitVar[Any]
 
     __creation_key:Any = object()
@@ -156,8 +156,8 @@ class DogBirthInfo:
         validate("creation key", create_key, equals=DogBirthInfo.__creation_key)
 
     @staticmethod
-    def create(name_str: str, breed_str: str, sex_str:str, birth_date_str: str ) -> 'DogBirthInfo':
-        return DogBirthInfo( Dogname(name_str), Breed(breed_str), Sex(sex_str), Date.parse_date(birth_date_str), DogBirthInfo.__creation_key)
+    def create( breed_str: str, sex_str:str, birth_date_str: str, estimated_adult_size:str ) -> 'DogBirthInfo':
+        return DogBirthInfo(Breed(breed_str), Sex(sex_str), Date.parse_date(birth_date_str), EstimatedAdultSize(estimated_adult_size), DogBirthInfo.__creation_key)
 
     def age(self) -> int:
         return self.birth_date.calculate_years_to_today()
@@ -172,7 +172,7 @@ class Dog:
         self.__birth_info: DogBirthInfo = dog_birth_info
         self.__entry_date: Date = entry_date
         self.__neutered: bool = neutered
-        self.estimated_size: EstimatedAdultSize = EstimatedAdultSize()
+        self.__name: Dogname = Dogname()
         self.__description: DogDescription = DogDescription()
         self.__picture: PictureUrl = PictureUrl()
 
@@ -187,10 +187,9 @@ class Dog:
     def _is_entry_after_birth(self) -> bool:
         return self.__birth_info.birth_date <= self.__entry_date
 
-    def _add_estimated_adult_size(self, estimated_size: EstimatedAdultSize, create_key: Any):
-        validate("add estimated_adult_size with builder", create_key, custom=Dog.Builder.is_valid_key)
-        validate("estimated_size", estimated_size)
-        self.__estimated_size = estimated_size
+    def _add_name(self, dogname: Dogname, create_key: Any):
+        validate("add dogname with builder", create_key, custom=Dog.Builder.is_valid_key)
+        self.__name = dogname
 
     @typechecked
     @dataclass()
@@ -210,9 +209,9 @@ class Dog:
             self.__dog._add_description(value, self.__create_key)
             return self
 
-        def with_estimated_adult_size(self, value: EstimatedAdultSize) -> 'Dog.Builder':
+        def with_dogname(self, value: Dogname) -> 'Dog.Builder':
             validate('dog', self.__dog)
-            self.__dog._add_estimated_adult_size(value, self.__create_key)
+            self.__dog._add_name(value, self.__create_key)
             return self
 
         def with_picture(self, value: PictureUrl) -> 'Dog.Builder':

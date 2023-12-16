@@ -21,15 +21,14 @@ from doghousetui.domain import Dogname, Date, Breed, Sex, DogDescription, Estima
 
 @pytest.fixture
 def valid_dog_names():
-    return ["Dogname", "Dname", "Do", "Mrdog", "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+    return ["", "Dogname", "Dname", "Do", "Mrdog", "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
 
 def test_valid_DogName(valid_dog_names):
     for i in valid_dog_names:
         Dogname(i)
 
-def test_dog_name_must_contains_at_least_two_chars():
-    with pytest.raises(ValidationError):
-        Dogname("D")
+def test_dog_name_by_default_is_empty():
+    assert Dogname().value == ""
 
 def test_dog_name_must_contains_at_most_50_chars():
     with pytest.raises(ValidationError):
@@ -157,6 +156,9 @@ def test_id_cannot_be_negative():
 def valid_DogId():
     return DogId(1)
 
+@pytest.fixture
+def valid_Dogname():
+    return Dogname()
 
 @pytest.fixture
 def valid_DogDescription():
@@ -164,7 +166,7 @@ def valid_DogDescription():
 
 @pytest.fixture
 def valid_DogBirthInfo():
-    return DogBirthInfo.create("Pippo","Bolognese","M","2020-05-05")
+    return DogBirthInfo.create("Bolognese","M","2020-05-05","L")
 
 
 @pytest.fixture
@@ -175,10 +177,6 @@ def valid_entry_date():
 @pytest.fixture
 def valid_DogPicture():
     return PictureUrl()
-
-@pytest.fixture
-def valid_EstimatedAdultSize():
-    return EstimatedAdultSize("M")
 
 @pytest.fixture
 def valid_dogBuilder(valid_DogId, valid_DogBirthInfo, valid_entry_date):
@@ -201,8 +199,8 @@ def test_dog_builder_cannot_create_dog_with_entry_after_birth_date(valid_DogId, 
 def test_dog_builder_add_dog_description_create_valid_dog(valid_dogBuilder,valid_DogDescription):
    valid_dogBuilder.with_description(valid_DogDescription).build()
 
-def test_dog_builder_add_dog_estimated_size_create_valid_dog(valid_dogBuilder, valid_EstimatedAdultSize):
-    valid_dogBuilder.with_estimated_adult_size(valid_EstimatedAdultSize).build()
+def test_dog_builder_add_dog_name_create_valid_dog(valid_dogBuilder, valid_Dogname):
+    valid_dogBuilder.with_dogname(valid_Dogname).build()
 
 def test_dog_builder_add_dog_picture_create_valid_dog(valid_dogBuilder, valid_DogPicture):
     valid_dogBuilder.with_picture(valid_DogPicture).build()

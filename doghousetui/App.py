@@ -1,5 +1,6 @@
 import sys
 from dataclasses import dataclass
+from typing import Any, Callable
 
 from requests import Response
 from typeguard import typechecked
@@ -141,38 +142,36 @@ class App:
     def __continue_without_login(self):
         self.__current_menu = self.__not_logged_menu
 
+    def __repeat_until_valid(self, message: str, error_message:str, function: Callable[[str], Any]) -> Any:
+        valid = False
+        while not valid:
+            try:
+                result = function(message)
+                valid = True
+                return result
+            except ValidationError:
+                print(error_message)
+                valid = False
+
+
+
     def __read_registration_data(self) -> tuple:
-        invalid: bool = True
-        while invalid:
-            invalid = False
-            try:
-                username: Username = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
-            except ValidationError:
-                print(Utils.INVALID_USERNAME_ERROR)
+        username: Username = self.__repeat_until_valid(Utils.INSERT_USERNAME_MESSAGE, Utils.INVALID_USERNAME_ERROR,
+                                                       self.__read_username)
+        email: Email = self.__repeat_until_valid(Utils.INSERT_EMAIL_MESSAGE, Utils.INVALID_EMAIL_ERROR,
+                                                       self.__read_email)
+        password1: Password = self.__repeat_until_valid(Utils.INSERT_PASSWORD_MESSAGE, Utils.INVALID_PASSWORD_ERROR,
+                                                       self.__read_password)
+        invalid = False
+        try:
+            password2: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
+            if password1 != password2:
+                print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
                 invalid = True
-                continue
-
-            try:
-                email: Email = self.__read_email(Utils.INSERT_EMAIL_MESSAGE)
-            except ValidationError:
-                print(Utils.INVALID_EMAIL_ERROR)
-                invalid = True
-                continue
-
-            try:
-                password1: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
-            except ValidationError:
-                print(Utils.INVALID_PASSWORD_ERROR)
-                invalid = True
-                continue
-            try:
-                password2: Password = self.__read_password(Utils.REPEAT_PASSWORD_MESSAGE)
-                if password1 != password2:
-                    print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
-                    invalid = True
-            except ValidationError:
-                invalid = True
-            return username, email, password1, invalid
+        except ValidationError:
+            print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
+            invalid = True
+        return username, email, password1, invalid
 
     @staticmethod
     def __print_error_message(errors):
@@ -195,12 +194,18 @@ class App:
     def __register(self):
         username, email, password, invalid = self.__read_registration_data()
         if not invalid:
-            response: Response = self.make_registration_request(username, email, password)
+            try:
+                response: Response = self.make_registration_request(username, email, password)
+            except:
+                print(Utils.CONNECTION_ERROR)
+                self.__switch_menu(self.__login_menu)
+                return
             if response.status_code == 204:
                 print(Utils.REGISTRATION_SUCCEEDED_MESSAGE)
             else:
                 App.__print_registration_errors(response.json())
             self.__switch_menu(self.__login_menu)
+
 
     def __show_dogs(self):
         dogs_response = self.make_dogs_request()

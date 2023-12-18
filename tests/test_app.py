@@ -292,7 +292,7 @@ def test_app_registration_prints_invalid_password_error_on_invalid_password(mock
 @mock.patch("builtins.print")
 def test_app_registration_prints_invalid_email_error_on_invalid_email(mocked_print, valid_username, invalid_emails, valid_email,
                                                                             valid_password):
-    with patch('builtins.input', side_effect=['3', valid_username, invalid_emails, valid_username, valid_email, '0']):
+    with patch('builtins.input', side_effect=['3', valid_username, invalid_emails, valid_email, '0']):
         with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
                 response = Mock(status_code=200)
@@ -302,6 +302,18 @@ def test_app_registration_prints_invalid_email_error_on_invalid_email(mocked_pri
                 assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print,
                                                                                   Utils.INVALID_EMAIL_ERROR, 1)
 
+@mock.patch("builtins.print")
+def test_app_registration_invalid_first_password_ask_again_for_first_password(mocked_print, valid_username, invalid_password, valid_email,
+                                                                            valid_password):
+    with patch('builtins.input', side_effect=['3', valid_username, valid_email, '0']):
+        with patch('getpass.getpass', side_effect=[invalid_password, valid_password, valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+                response = Mock(status_code=200)
+                mocked_post.return_value = response
+                app: App = App()
+                app.run()
+                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print,
+                                                                                  Utils.INVALID_PASSWORD_ERROR, 1)
 
 
 @mock.patch("builtins.print")
@@ -371,6 +383,40 @@ def test_registration_of_user_with_already_existing_username_prints_error(mocked
                 app.run()
                 assert mocked_return_args_partial_contains_string(mocked_print,
                                                                   'A user with that username already exists.')
+@mock.patch("builtins.print")
+def test_failed_registration_of_user_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
+    with patch('builtins.input', side_effect=['3', valid_username, valid_email ,'0']):
+        with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+                response_registration = Mock()
+                response_registration.side_effect = Exception
+                mocked_post.return_value = response_registration
+                app: App = App()
+                app.run()
+                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
+
+@mock.patch("builtins.print")
+def test_registration_of_user_error_code_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
+    with patch('builtins.input', side_effect=['3', valid_username, valid_email ,'0']):
+        with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+                response_registration = Mock(status_code=400)
+                response_registration.json.return_value = {'username': ['A user with that username already exists.']}
+                mocked_post.return_value = response_registration
+                app: App = App()
+                app.run()
+                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
+
+@mock.patch("builtins.print")
+def test_registration_of_user_successfully_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
+    with patch('builtins.input', side_effect=['3', valid_username, valid_email ,'0']):
+        with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+                response_registration = Mock(status_code=204)
+                mocked_post.return_value = response_registration
+                app: App = App()
+                app.run()
+                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
 
 @mock.patch("builtins.print")
 def test_registration_invalid_for_server_prints_error_by_server(mocked_print, valid_email):

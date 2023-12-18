@@ -31,3 +31,28 @@ class Token:
 
     def __str__(self):
         return self.__value
+
+
+
+@typechecked
+@dataclass(order=True, frozen=True)
+class Username:
+    value:str = field()
+    def __post_init__(self):
+        validate("validation username", self.value, min_len=2, max_len=30, custom=pattern(r"[a-zA-Z0-9]*"))
+
+    def __str__(self):
+        return self.value
+@typechecked
+@dataclass(order=True, frozen=True)
+class Password:
+    value:str
+    def __post_init__(self):
+        validate("validaton password", self.value, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
+
+@typechecked
+@dataclass(order=True, frozen=True)
+class Email:
+    value:Optional[str] = field(default="")
+    def __post_init__(self):
+        validate("validaton email", self.value, min_len=0, max_len=320, custom=pattern(r"^([a-zA-Z0-9\+\_\.-]+@(([a-zA-Z0-9]+(\.[a-zA-Z0-9]+)?))+)?$"))

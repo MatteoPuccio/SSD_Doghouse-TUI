@@ -9,9 +9,9 @@ from doghousetui import Utils
 from doghousetui.Menu import Menu, Description, MenuEntry
 from enum import Enum
 import getpass
-from doghousetui.Token import Token
 import requests
 
+from doghousetui.credentials import Username, Password, Token, Email
 from validation.regex import pattern
 
 
@@ -61,24 +61,30 @@ class App:
 
         self.__current_menu: Menu = self.__login_menu
 
-    def __read_username(self, message) -> str:
+    def __read_username(self, message) -> Username:
         username: str = input(message)
-        validate("validation username", username, min_len=2, max_len=30, custom=pattern(r"[a-zA-Z0-9]*"))
-        return username
+        return Username(username)
 
-    def __read_password(self, message) -> str:
+    def __read_email(self, message) -> Email:
+        email: str = input(message)
+        if email == "":
+            return Email()
+        else:
+            return Email(email)
+
+
+    def __read_password(self, message) -> Password:
         password: str = getpass.getpass(message)
-        validate("validaton password", password, min_len=8, max_len=30, custom=pattern(r"[a-zA-Z0-9@!#]*"))
-        return password
+        return Password(password)
 
-    def make_login_request(self, username: str, password: str) -> Response:
+    def make_login_request(self, username: Username, password: Password) -> Response:
         return requests.post(Utils.API_SERVER_LOGIN, json={"username": username, "password": password})
 
     def make_logout_request(self) -> Response:
         return requests.post(Utils.API_SERVER_LOGOUT)
 
-    def make_registration_request(self, username: str, password: str) -> Response:
-        return requests.post(Utils.API_SERVER_REGISTER, json={"username": username, "password1": password, "password2": password})
+    def make_registration_request(self, username: Username, email:Email, password: Password) -> Response:
+        return requests.post(Utils.API_SERVER_REGISTER, json={"username": username.value, "email":email, "password1": password.value, "password2": password.value})
 
     def make_role_request(self) -> Response:
         return requests.get(Utils.API_SERVER_LOGIN_ROLE, headers={'Authorization': f'Token {self.__token}'})
@@ -88,12 +94,12 @@ class App:
 
     def __login(self):
         try:
-            username: str = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
+            username: Username = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
         except ValidationError:
             print(Utils.INVALID_USERNAME_ERROR)
             return
         try:
-            password: str = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
+            password: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
         except ValidationError:
             print(Utils.INVALID_PASSWORD_ERROR)
             return
@@ -112,7 +118,7 @@ class App:
 
             role = response_role.json()[Utils.RESPONSE_ROLE_KEY]
 
-            print(Utils.LOGGED_IN_MESSAGE % (username))
+            print(Utils.LOGGED_IN_MESSAGE % username)
             if role == Utils.RESPONSE_USER_ROLE_USER_VALUE:
                 self.__switch_menu(self.__logged_user_menu)
             elif role == Utils.RESPONSE_USER_ROLE_ADMIN_VALUE:
@@ -137,31 +143,36 @@ class App:
 
     def __read_registration_data(self) -> tuple:
         invalid: bool = True
-        username:str = ''
-        password1:str = ''
-        password2:str = ''
         while invalid:
             invalid = False
             try:
-                username: str = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
+                username: Username = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
             except ValidationError:
                 print(Utils.INVALID_USERNAME_ERROR)
                 invalid = True
                 continue
+
             try:
-                password1: str = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
+                email: Email = self.__read_email(Utils.INSERT_EMAIL_MESSAGE)
+            except ValidationError:
+                print(Utils.INVALID_EMAIL_ERROR)
+                invalid = True
+                continue
+
+            try:
+                password1: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
             except ValidationError:
                 print(Utils.INVALID_PASSWORD_ERROR)
                 invalid = True
                 continue
             try:
-                password2: str = self.__read_password(Utils.REPEAT_PASSWORD_MESSAGE)
+                password2: Password = self.__read_password(Utils.REPEAT_PASSWORD_MESSAGE)
                 if password1 != password2:
                     print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
                     invalid = True
             except ValidationError:
                 invalid = True
-            return username, password1, invalid
+            return username, email, password1, invalid
 
     @staticmethod
     def __print_error_message(errors):
@@ -182,9 +193,9 @@ class App:
             App.__print_error_message(json['non_field_errors'])
 
     def __register(self):
-        username, password, invalid = self.__read_registration_data()
+        username, email, password, invalid = self.__read_registration_data()
         if not invalid:
-            response: Response = self.make_registration_request(username, password)
+            response: Response = self.make_registration_request(username, email, password)
             if response.status_code == 204:
                 print(Utils.REGISTRATION_SUCCEEDED_MESSAGE)
             else:

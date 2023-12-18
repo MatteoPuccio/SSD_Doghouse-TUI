@@ -5,6 +5,7 @@ API_SERVER_LOGIN = API_SERVER+"/auth/login/"
 API_SERVER_LOGIN_ROLE = API_SERVER+"/role/"
 API_SERVER_LOGOUT = API_SERVER+"/auth/logout/"
 API_SERVER_REGISTER = API_SERVER+"/auth/registration/"
+API_SERVER_DOGS = API_SERVER + "/dogs/"
 
 LOGIN_MENU_DESCRIPTION = 'DOGHOUSE Login'
 LOGIN_ENTRY = 'login'
@@ -58,3 +59,4 @@ REGISTRATION_SUCCEEDED_MESSAGE = 'We have correctly registered your account, you
 INVALID_MENU_SELECTION = 'Invalid selection. Please, try again...'
 
 DATE_WRONG_FORMAT_MESSAGE = 'Expected iso format string'
+INVALID_TOKEN = 'The received token is not valid'

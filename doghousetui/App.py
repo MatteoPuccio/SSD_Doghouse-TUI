@@ -83,6 +83,9 @@ class App:
     def make_role_request(self) -> Response:
         return requests.get(Utils.API_SERVER_LOGIN_ROLE, headers={'Authorization': f'Token {self.__token}'})
 
+    def make_dogs_request(self) -> Response:
+        return requests.get(Utils.API_SERVER_DOGS)
+
     def __login(self):
         try:
             username: str = self.__read_username(Utils.INSERT_USERNAME_MESSAGE)
@@ -102,7 +105,7 @@ class App:
             try:
                 self.__token = Token(json_response["key"])
             except ValidationError:
-                App.__print_login_errors(json_response)
+                print(Utils.INVALID_TOKEN)
                 return
 
             response_role: Response = self.make_role_request()
@@ -161,21 +164,22 @@ class App:
             return username, password1, invalid
 
     @staticmethod
-    def __print_error_message_list(error_list):
-        for error_message in error_list:
-            print('\t', error_message)
+    def __print_error_message(errors):
+        for error in errors:
+            print(error)
 
     @staticmethod
     def __print_registration_errors(json):
         if 'non_field_errors' in json:
-            App.__print_error_message_list(json['non_field_errors'])
+            App.__print_error_message(json['non_field_errors'])
         if 'username' in json:
-            App.__print_error_message_list(json['username'])
+            App.__print_error_message(json['username'])
 
     @staticmethod
     def __print_login_errors(json):
+        print(json)
         if 'non_field_errors' in json:
-            App.__print_error_message_list(json['non_field_errors'])
+            App.__print_error_message(json['non_field_errors'])
 
     def __register(self):
         username, password, invalid = self.__read_registration_data()
@@ -184,12 +188,15 @@ class App:
             if response.status_code == 204:
                 print(Utils.REGISTRATION_SUCCEEDED_MESSAGE)
             else:
-                print(Utils.REGISTRATION_ERROR)
                 App.__print_registration_errors(response.json())
             self.__switch_menu(self.__login_menu)
 
     def __show_dogs(self):
-        pass
+        dogs_response = self.make_dogs_request()
+        dogs = dogs_response.json()
+        for dog_json in dogs:
+            print(dog_json)
+        #pass
 
     def __show_preferences(self):
         pass
@@ -206,7 +213,6 @@ class App:
 
     def __remove_preference(self):
         pass
-
 
     def __close_app(self):
         print(Utils.EXIT_MESSAGE)

@@ -13,6 +13,8 @@ import getpass
 import requests
 
 from doghousetui.credentials import Username, Password, Token, Email
+from doghousetui.domain import DogId, Dog, DogBirthInfo, DogDescription, PictureUrl, Dogname, Date
+
 from validation.regex import pattern
 
 
@@ -25,27 +27,31 @@ class App:
         self.__login_menu = Menu.Builder(Description(Utils.LOGIN_MENU_DESCRIPTION)) \
             .with_entry(MenuEntry.create('1', Utils.LOGIN_ENTRY, is_exit=True, on_selected=lambda: self.__login())) \
             .with_entry(
-            MenuEntry.create('2', Utils.CONTINUE_WITHOUT_LOGIN_ENTRY, is_exit=True, on_selected=lambda: self.__continue_without_login())) \
-            .with_entry(MenuEntry.create('3', Utils.REGISTER_ENTRY, is_exit=True, on_selected=lambda: self.__register())) \
+            MenuEntry.create('2', Utils.CONTINUE_WITHOUT_LOGIN_ENTRY, is_exit=True,
+                             on_selected=lambda: self.__continue_without_login())) \
+            .with_entry(
+            MenuEntry.create('3', Utils.REGISTER_ENTRY, is_exit=True, on_selected=lambda: self.__register())) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
 
         self.__logged_user_menu = Menu.Builder(Description(Utils.USER_MENU_DESCRIPTION)) \
-            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=self.__show_dogs)) \
-            .with_entry(MenuEntry.create('2', Utils.SHOW_PREFERENCES_ENTRY, on_selected=self.__show_preferences)) \
-            .with_entry(MenuEntry.create('3', Utils.ADD_PREFERENCE_ENTRY, on_selected=self.__add_preference)) \
-            .with_entry(MenuEntry.create('4', Utils.REMOVE_PREFERENCE_ENTRY, on_selected=self.__remove_preference)) \
+            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=lambda: self.__show_dogs())) \
+            .with_entry(
+            MenuEntry.create('2', Utils.SHOW_PREFERENCES_ENTRY, on_selected=lambda: self.__show_preferences())) \
+            .with_entry(MenuEntry.create('3', Utils.ADD_PREFERENCE_ENTRY, on_selected=lambda: self.__add_preference())) \
+            .with_entry(
+            MenuEntry.create('4', Utils.REMOVE_PREFERENCE_ENTRY, on_selected=lambda: self.__remove_preference())) \
             .with_entry(
             MenuEntry.create('5', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
             .with_entry(
-            MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected= lambda: self.__close_app())) \
+            MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
 
         self.__logged_admin_menu = Menu.Builder(Description(Utils.ADMIN_MENU_DESCRIPTION)) \
-            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=self.__show_dogs)) \
+            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=lambda: self.__show_dogs())) \
             .with_entry(MenuEntry.create('2', Utils.ADD_DOG_ENTRY, on_selected=self.__add_dog)) \
-            .with_entry(MenuEntry.create('3', Utils.REMOVE_DOG_ENTRY, on_selected=self.__remove_dog)) \
+            .with_entry(MenuEntry.create('3', Utils.REMOVE_DOG_ENTRY, on_selected=lambda: self.__remove_dog())) \
             .with_entry(
             MenuEntry.create('4', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
             .with_entry(
@@ -53,9 +59,10 @@ class App:
             .build()
 
         self.__not_logged_menu = Menu.Builder(Description(Utils.GENERIC_USER_MENU_DESCRIPTION)) \
-            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=self.__show_dogs)) \
+            .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=lambda: self.__show_dogs())) \
             .with_entry(
-            MenuEntry.create('2', Utils.BACK_TO_LOGIN_MENU_ENTRY, is_exit=True, on_selected=lambda: self.__switch_menu(self.__login_menu))) \
+            MenuEntry.create('2', Utils.BACK_TO_LOGIN_MENU_ENTRY, is_exit=True,
+                             on_selected=lambda: self.__switch_menu(self.__login_menu))) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
@@ -139,8 +146,9 @@ class App:
         else:
             print(Utils.LOGOUT_ERROR)
 
+
     def __continue_without_login(self):
-        self.__current_menu = self.__not_logged_menu
+        self.__switch_menu(self.__not_logged_menu)
 
     def __repeat_until_valid(self, message: str, error_message:str, function: Callable[[str], Any]) -> Any:
         valid = False
@@ -156,12 +164,9 @@ class App:
 
 
     def __read_registration_data(self) -> tuple:
-        username: Username = self.__repeat_until_valid(Utils.INSERT_USERNAME_MESSAGE, Utils.INVALID_USERNAME_ERROR,
-                                                       self.__read_username)
-        email: Email = self.__repeat_until_valid(Utils.INSERT_EMAIL_MESSAGE, Utils.INVALID_EMAIL_ERROR,
-                                                       self.__read_email)
-        password1: Password = self.__repeat_until_valid(Utils.INSERT_PASSWORD_MESSAGE, Utils.INVALID_PASSWORD_ERROR,
-                                                       self.__read_password)
+        username: Username = self.__repeat_until_valid(Utils.INSERT_USERNAME_MESSAGE, Utils.INVALID_USERNAME_ERROR, self.__read_username)
+        email: Email = self.__repeat_until_valid(Utils.INSERT_EMAIL_MESSAGE, Utils.INVALID_EMAIL_ERROR, self.__read_email)
+        password1: Password = self.__repeat_until_valid(Utils.INSERT_PASSWORD_MESSAGE, Utils.INVALID_PASSWORD_ERROR, self.__read_password)
         invalid = False
         try:
             password2: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
@@ -206,13 +211,67 @@ class App:
                 App.__print_registration_errors(response.json())
             self.__switch_menu(self.__login_menu)
 
+    def make_dog_remove_request(self, dog_id: DogId) -> Response:
+        return requests.delete(f'{Utils.API_SERVER_DOGS}{dog_id.value}/',
+                               headers={'Authorization': f'Token {self.__token}'})
 
     def __show_dogs(self):
-        dogs_response = self.make_dogs_request()
-        dogs = dogs_response.json()
-        for dog_json in dogs:
-            print(dog_json)
-        #pass
+        try:
+            dogs_response: Response = self.make_dogs_request()
+        except Exception:
+            print(Utils.CONNECTION_ERROR)
+            return
+        if dogs_response.status_code == 200:
+            dogs = dogs_response.json()
+            all_dogs = []
+            for dog_json in dogs:
+                dog = self.__create_dog_from_json(dog_json)
+                all_dogs.append(dog)
+        else:
+            print(Utils.SHOW_DOGS_ERROR)
+        if len(all_dogs) <= Utils.SHOW_DOGS_BATCH_SIZE:
+            for dog in all_dogs:
+                print(dog)
+        else:
+            wants_more: bool = True
+            start_idx = 0
+            while wants_more:
+                for i in range(start_idx, start_idx + Utils.SHOW_DOGS_BATCH_SIZE):
+                    if i < len(dogs):
+                        print(dogs[i])
+
+                if start_idx + Utils.SHOW_DOGS_BATCH_SIZE < len(dogs):
+                    selection: str = input(Utils.WANTS_MORE_QUESTION)
+                    if selection.lower() != Utils.WANTS_MORE_YES_ANSWER:
+                        wants_more = False
+                else:
+                    wants_more = False
+                start_idx += Utils.SHOW_DOGS_BATCH_SIZE
+
+    def __create_dog_from_json(self, json) -> Dog:
+        print("Dogsssss")
+        # name picture description are optional
+        dogBuilder: Dog.Builder = Dog.Builder(id=DogId(json['id']), dog_birth_info=DogBirthInfo.create(breed_str=json['breed'], sex_str=json['sex'], birth_date_str=json['birth_date'], estimated_adult_size=json['estimated_adult_size']),
+                                               entry_date=Date.parse_date(json['entry_date']), neutered=True) #eval(json['neutered'])
+        if 'description' in json:
+            dogBuilder.with_description(DogDescription(json['description']))
+        if 'name' in json:
+            dogBuilder.with_dogname(Dogname(json['name']))
+        if 'picture' in json:
+            dogBuilder.with_picture(PictureUrl(json['picture']))
+        return dogBuilder.build()
+
+    def __add_dog(self):
+        print(Utils.REQUIRE_INPUT_DOG_DATA)
+        dog_name = input(Utils.DOG_NAME_PRINT)
+        dog_description = input(Utils.DOG_DESCRIPTION_INPUT)
+        dog_breed = input(Utils.DOG_BREED_INPUT)
+        dog_sex = input(Utils.DOG_SEX_INPUT)
+        dog_birth_date = input(Utils.DOG_BIRTH_DATE_INPUT)
+        dog_entry_date = input(Utils.DOG_ENTRY_DATE_INPUT)
+        dog_neutered = input(Utils.DOG_NEUTERED_INPUT)
+        dog_picture = input(Utils.DOG_PICTURE_INPUT)
+        print(Utils.DOG_ADDED_MESSAGE)
 
     def __show_preferences(self):
         pass
@@ -220,12 +279,27 @@ class App:
     def __add_preference(self):
         pass
 
-    def __add_dog(self):
-        #print(Utils.REQUIRE_INPUT_DOG_DATA)
-        pass
 
     def __remove_dog(self):
-        pass
+        invalid = True
+        while invalid:
+            invalid = False
+            try:
+                id_input: int = int(input(Utils.DOG_ID_INPUT))
+                dog_id: DogId = DogId(id_input)
+            except Exception:
+                print(Utils.DOG_ID_VALIDATION_ERROR)
+                invalid = True
+        try:
+            response: Response = self.make_dog_remove_request(dog_id)
+        except Exception as e:
+            print(Utils.CONNECTION_ERROR)
+            return
+        if response.status_code == 200:
+            print(f'Dog with id {dog_id.value}: {Utils.DOG_DELETED_MESSAGE}')
+        else:
+            if response.status_code == 404:
+                print(Utils.DOG_NOT_FOUND_ERROR)
 
     def __remove_preference(self):
         pass

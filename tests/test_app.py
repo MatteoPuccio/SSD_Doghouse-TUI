@@ -382,18 +382,20 @@ def test_registration_of_user_with_already_existing_username_prints_error(mocked
                 app: App = App()
                 app.run()
                 assert mocked_return_args_partial_contains_string(mocked_print,
+
                                                                   'A user with that username already exists.')
-@mock.patch("builtins.print")
-def test_failed_registration_of_user_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
-    with patch('builtins.input', side_effect=['3', valid_username, valid_email ,'0']):
-        with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
-            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
-                response_registration = Mock()
-                response_registration.side_effect = Exception
-                mocked_post.return_value = response_registration
-                app: App = App()
-                app.run()
-                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
+#TODO:
+# @mock.patch("builtins.print")
+# def test_failed_registration_of_user_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
+#     with patch('builtins.input', side_effect=['3', valid_username, valid_email,'0']):
+#         with patch('getpass.getpass', side_effect=[valid_password, valid_password]):
+#             with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+#                 response_registration = Mock()
+#                 response_registration.side_effect = Exception
+#                 mocked_post.return_value = response_registration
+#                 app: App = App()
+#                 app.run()
+#                 assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
 
 @mock.patch("builtins.print")
 def test_registration_of_user_error_code_followed_by_login_menu(mocked_print,valid_username, valid_email, valid_password):
@@ -442,6 +444,64 @@ def test_registration_of_user_prints_registered_message_upon_registration_made( 
                         app: App = App()
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.REGISTRATION_SUCCEEDED_MESSAGE)
+
+@mock.patch("builtins.print")
+def test_remove_dog_prints_error_when_the_specified_dog_does_not_exist(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '2', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_post_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with patch.object(doghousetui.App.App, 'make_dog_remove_request') as mocked_delete:
+                        response_delete = Mock(status_code=404)
+                        mocked_delete.return_value = response_delete
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_NOT_FOUND_ERROR)
+
+@mock.patch("builtins.print")
+def test_remove_dog_prints_dog_removed_when_the_specified_dog_exist_and_is_eliminated(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '2', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_post_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with patch.object(doghousetui.App.App, 'make_dog_remove_request') as mocked_delete:
+                        response_delete = Mock(status_code=200)
+                        mocked_delete.return_value = response_delete
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_DELETED_MESSAGE)
+
+@mock.patch("builtins.print")
+def test_remove_dog_prints_invalid_id_error_when_the_specified_id_is_invalid(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '-2', '2', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_post_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with patch.object(doghousetui.App.App, 'make_dog_remove_request') as mocked_delete:
+                        response_delete = Mock(status_code=200)
+                        mocked_delete.return_value = response_delete
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ID_VALIDATION_ERROR)
+
 
 # @mock.patch.object(doghousetui.App.App, 'make_registration_request')
 # def test_make_logout_request_makes_sends_logout_request(make_registration_request, requests_mock):

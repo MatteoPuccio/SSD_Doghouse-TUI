@@ -168,13 +168,13 @@ class Dog:
 
     def __init__(self, id: DogId, dog_birth_info: DogBirthInfo, entry_date: Date, neutered: bool, create_key: Any):
         validate("creation_key", create_key, custom=Dog.Builder.is_valid_key)
-        self.__dog_id: DogId = id
-        self.__birth_info: DogBirthInfo = dog_birth_info
-        self.__entry_date: Date = entry_date
-        self.__neutered: bool = neutered
-        self.__name: Dogname = Dogname()
-        self.__description: DogDescription = DogDescription()
-        self.__picture: PictureUrl = PictureUrl()
+        self.dog_id: DogId = id
+        self.birth_info: DogBirthInfo = dog_birth_info
+        self.entry_date: Date = entry_date
+        self.neutered: bool = neutered
+        self.name: Dogname = Dogname()
+        self.description: DogDescription = DogDescription()
+        self.picture: PictureUrl = PictureUrl()
 
     def _add_description(self, description: DogDescription,create_key:Any):
         validate("add description with builder", create_key, custom=Dog.Builder.is_valid_key)

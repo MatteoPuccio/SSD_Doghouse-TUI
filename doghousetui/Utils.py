@@ -45,6 +45,12 @@ DEFAULT_TOKEN_VALUE = 'notloggedtoken00000000000000000000000000'
 
 PATH_TO_BREED_JSON = 'resources/dogs_breeds.json'
 INVALID_BREED = 'The selected breed is not among the valid ones'
+INVALID_SEX = 'The provided value for sex is not valid'
+INVALID_DESCRIPTION = 'The provided description is not valid'
+INVALID_DOG_NAME = 'The provided dog name is not valid'
+INVALID_DATE = 'The provided date is not valid'
+INVALID_URL = 'The provided url is not valid'
+INVALID_NEUTERED_VALUE = 'The provided value for neutered is not valid'
 
 RESPONSE_ROLE_KEY = "role"
 RESPONSE_USER_ROLE_USER_VALUE = "user"
@@ -52,6 +58,7 @@ RESPONSE_USER_ROLE_ADMIN_VALUE = "doghouse-worker"
 INSERT_USERNAME_MESSAGE = 'insert username: '
 INSERT_EMAIL_MESSAGE = 'insert email (OPTIONAL): '
 INSERT_PASSWORD_MESSAGE = 'insert password: '
+CONFIRM_PASSWORD_MESSAGE = 'confirm password: '
 REPEAT_PASSWORD_MESSAGE = 'Repeat password: '
 REGISTRATION_PASSWORDS_DO_NOT_COINCIDE = 'The passwords do not coincide'
 
@@ -78,9 +85,9 @@ DOG_NEUTERED_INPUT = '\t neutered:(0/1) '
 DOG_DESCRIPTION_INPUT = '\t description(enter to leave empty): '
 DOG_NAME_INPUT = '\t name(enter to leave empty): '
 DOG_PICTURE_INPUT = '\t picture url(enter to leave empty): '
-DOG_ID_PRINT = '\tid: '
-DOG_BREED_PRINT = '\tbreed: '
-DOG_SEX_PRINT = '\tsex: '
+DOG_ID_PRINT = '\t id: '
+DOG_BREED_PRINT = '\t breed: '
+DOG_SEX_PRINT = '\t sex: '
 DOG_BIRTH_DATE_PRINT = '\t birth date: '
 DOG_ESTIMATED_ADULT_SIZE_PRINT = '\t estimated adult size: '
 DOG_ENTRY_DATE_PRINT = '\t entry date: '

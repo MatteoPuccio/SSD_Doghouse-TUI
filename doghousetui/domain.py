@@ -53,6 +53,8 @@ class Breed:
             breeds: dict = json.load(json_file)
             return frozenset(breeds["dogs"])
 
+    def __str__(self):
+        return self.value
 
 @typechecked
 @dataclass(order=True, frozen=True)
@@ -141,6 +143,8 @@ class DogId:
     def __post_init__(self):
         validate("id validation", self.value, min_value=0)
 
+    def __str__(self):
+        return self.value
 
 @typechecked
 @dataclass(frozen=True)
@@ -152,6 +156,7 @@ class DogBirthInfo:
     create_key: InitVar[Any]
 
     __creation_key:Any = object()
+
     def __post_init__(self, create_key: Any) -> None:
         validate("creation key", create_key, equals=DogBirthInfo.__creation_key)
 
@@ -161,6 +166,13 @@ class DogBirthInfo:
 
     def age(self) -> int:
         return self.birth_date.calculate_years_to_today()
+
+    def representation(self) -> str:
+        return Utils.DOG_BREED_PRINT + self.breed.value + "\n" \
+                + Utils.DOG_SEX_PRINT + self.sex.value + "\n" \
+                + Utils.DOG_BIRTH_DATE_PRINT + self.birth_date.__str__() + "\n" \
+                + Utils.DOG_ESTIMATED_ADULT_SIZE_PRINT + self.estimated_adult_size.value
+
 
 
 @typechecked
@@ -182,14 +194,24 @@ class Dog:
 
     def _add_picture(self, picture: PictureUrl, create_key:Any):
         validate("add picture with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.__picture = picture
+        self.picture = picture
 
     def _is_entry_after_birth(self) -> bool:
-        return self.__birth_info.birth_date <= self.__entry_date
+        return self.birth_info.birth_date <= self.entry_date
 
     def _add_name(self, dogname: Dogname, create_key: Any):
         validate("add dogname with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.__name = dogname
+        self.name = dogname
+
+    def compact_representation(self):
+        return f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}\n'
+
+    def extended_representation(self):
+        return (f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n' \
+                f'{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}\n{Utils.DOG_NEUTERED_PRINT}{self.neutered}\n' \
+                f'{Utils.DOG_NAME_PRINT}{self.name.value}\n{Utils.DOG_DESCRIPTION_PRINT}{self.description.value}\n' \
+                f'{Utils.DOG_PICTURE_PRINT}{self.picture.value}\n')
+
 
     @typechecked
     @dataclass()

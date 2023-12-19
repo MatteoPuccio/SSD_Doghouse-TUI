@@ -56,3 +56,6 @@ class Email:
     value:Optional[str] = field(default="")
     def __post_init__(self):
         validate("validaton email", self.value, min_len=0, max_len=320, custom=pattern(r"^([a-zA-Z0-9\+\_\.-]+@(([a-zA-Z0-9]+(\.[a-zA-Z0-9]+)?))+)?$"))
+
+    def is_default(self):
+        return self.value == ""

@@ -81,6 +81,10 @@ class Test_Email:
             return ['aaa@aaa', "", 'email+@pip.com', 'valid@em.a', "+@1.1"]
 
         @pytest.fixture
+        def valid_email(self):
+            return 'aaa@aaa'
+
+        @pytest.fixture
         def invalid_emails(self):
             return ['aaaaaa', 'email+#ù@pip.com', 'valid@e.m.a', "email@b."]
 
@@ -93,6 +97,12 @@ class Test_Email:
             for i in invalid_emails:
                 with pytest.raises(ValidationError):
                     Email(i)
+
+        def test_email_is_default_value(self, valid_email):
+            if Email().value == "":
+                assert Email().is_default()
+                email = Email(valid_email)
+                assert email.is_default() == False
 
 
 class Test_Password:

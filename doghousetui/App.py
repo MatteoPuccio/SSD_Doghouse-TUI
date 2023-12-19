@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from requests import Response
 from typeguard import typechecked
@@ -13,7 +13,7 @@ import getpass
 import requests
 
 from doghousetui.credentials import Username, Password, Token, Email
-from doghousetui.domain import DogId, Dog, DogBirthInfo, DogDescription, PictureUrl, Dogname, Date
+from doghousetui.domain import DogId, Dog, DogBirthInfo, DogDescription, PictureUrl, Dogname, Date, Breed, Sex
 
 from validation.regex import pattern
 
@@ -85,14 +85,48 @@ class App:
         password: str = getpass.getpass(message)
         return Password(password)
 
+    def __read_dog_name(self, message) -> Dogname:
+        dogname: str = input(message)
+        return Dogname(dogname)
+
+    def __read_description(self, message) -> Description:
+        description: str = input(message)
+        return Description(description)
+
+    def __read_breed(self, message) -> Breed:
+        breed: str = input(message)
+        return Breed(breed)
+
+    def __read_sex(self, message) -> Sex:
+        sex: str = input(message)
+        return Sex(sex)
+
+    def __read_date(self, message) -> Date:
+        date: str = input(message)
+        return Date(date)
+
+    #TODO
+    def __read_neutered(self, message) -> Date:
+        neutered: str = input(message)
+        return True
+
+    def __read_picture_url(self, message) -> PictureUrl:
+        url: str = input(message)
+        return PictureUrl(url)
+
     def make_login_request(self, username: Username, password: Password) -> Response:
-        return requests.post(Utils.API_SERVER_LOGIN, json={"username": username, "password": password})
+        return requests.post(Utils.API_SERVER_LOGIN, json={"username": username.value, "password": password.value})
 
     def make_logout_request(self) -> Response:
         return requests.post(Utils.API_SERVER_LOGOUT)
 
     def make_registration_request(self, username: Username, email:Email, password: Password) -> Response:
-        return requests.post(Utils.API_SERVER_REGISTER, json={"username": username.value, "email":email, "password1": password.value, "password2": password.value})
+        if email.is_default():
+            return requests.post(Utils.API_SERVER_REGISTER,json={"username": username.value, "password1": password.value,
+                                                             "password2": password.value})
+        return requests.post(Utils.API_SERVER_REGISTER,
+                                    json={"username": username.value, "email": email.value, "password1": password.value,
+                                   "password2": password.value})
 
     def make_role_request(self) -> Response:
         return requests.get(Utils.API_SERVER_LOGIN_ROLE, headers={'Authorization': f'Token {self.__token}'})
@@ -169,7 +203,7 @@ class App:
         password1: Password = self.__repeat_until_valid(Utils.INSERT_PASSWORD_MESSAGE, Utils.INVALID_PASSWORD_ERROR, self.__read_password)
         invalid = False
         try:
-            password2: Password = self.__read_password(Utils.INSERT_PASSWORD_MESSAGE)
+            password2: Password = self.__read_password(Utils.REPEAT_PASSWORD_MESSAGE)
             if password1 != password2:
                 print(Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
                 invalid = True
@@ -223,7 +257,7 @@ class App:
             return
         if dogs_response.status_code == 200:
             dogs = dogs_response.json()
-            all_dogs = []
+            all_dogs: List[Dog] = []
             for dog_json in dogs:
                 dog = self.__create_dog_from_json(dog_json)
                 all_dogs.append(dog)
@@ -238,7 +272,7 @@ class App:
             while wants_more:
                 for i in range(start_idx, start_idx + Utils.SHOW_DOGS_BATCH_SIZE):
                     if i < len(dogs):
-                        print(dogs[i])
+                        print(all_dogs[i].extended_representation())
 
                 if start_idx + Utils.SHOW_DOGS_BATCH_SIZE < len(dogs):
                     selection: str = input(Utils.WANTS_MORE_QUESTION)
@@ -249,7 +283,6 @@ class App:
                 start_idx += Utils.SHOW_DOGS_BATCH_SIZE
 
     def __create_dog_from_json(self, json) -> Dog:
-        print("Dogsssss")
         # name picture description are optional
         dogBuilder: Dog.Builder = Dog.Builder(id=DogId(json['id']), dog_birth_info=DogBirthInfo.create(breed_str=json['breed'], sex_str=json['sex'], birth_date_str=json['birth_date'], estimated_adult_size=json['estimated_adult_size']),
                                                entry_date=Date.parse_date(json['entry_date']), neutered=True) #eval(json['neutered'])
@@ -263,14 +296,15 @@ class App:
 
     def __add_dog(self):
         print(Utils.REQUIRE_INPUT_DOG_DATA)
-        dog_name = input(Utils.DOG_NAME_PRINT)
-        dog_description = input(Utils.DOG_DESCRIPTION_INPUT)
-        dog_breed = input(Utils.DOG_BREED_INPUT)
-        dog_sex = input(Utils.DOG_SEX_INPUT)
-        dog_birth_date = input(Utils.DOG_BIRTH_DATE_INPUT)
-        dog_entry_date = input(Utils.DOG_ENTRY_DATE_INPUT)
-        dog_neutered = input(Utils.DOG_NEUTERED_INPUT)
-        dog_picture = input(Utils.DOG_PICTURE_INPUT)
+        dog_name: Dogname = self.__repeat_until_valid(Utils.DOG_NAME_PRINT, Utils.INVALID_DOG_NAME, self.__read_dog_name)
+        dog_description = self.__repeat_until_valid(Utils.DOG_DESCRIPTION_INPUT, Utils.INVALID_DESCRIPTION, self.__read_description)
+        #TODO change method in order to give hints
+        dog_breed = self.__repeat_until_valid(Utils.DOG_BREED_INPUT, Utils.INVALID_BREED, self.__read_breed)
+        dog_sex = self.__repeat_until_valid(Utils.DOG_SEX_INPUT, Utils.INVALID_SEX, self.__read_sex)
+        dog_birth_date = self.__repeat_until_valid(Utils.DOG_BIRTH_DATE_INPUT, Utils.INVALID_DATE, self.__read_date)
+        dog_entry_date = self.__repeat_until_valid(Utils.DOG_ENTRY_DATE_INPUT, Utils.INVALID_DATE, self.__read_date)
+        dog_neutered = self.__repeat_until_valid(Utils.DOG_NEUTERED_INPUT, Utils.INVALID_NEUTERED_VALUE, self.__read_neutered)
+        dog_picture = self.__repeat_until_valid(Utils.DOG_PICTURE_INPUT, Utils.INVALID_URL, self.__read_picture_url)
         print(Utils.DOG_ADDED_MESSAGE)
 
     def __show_preferences(self):

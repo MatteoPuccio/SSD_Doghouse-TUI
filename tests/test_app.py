@@ -1,5 +1,6 @@
 import builtins
 from getpass import getpass
+from typing import List
 from unittest import mock
 from unittest.mock import patch, Mock
 
@@ -375,6 +376,35 @@ def test_login_prints_unable_to_log_in_if_profile_does_not_exist(mock_print, inv
                 mocked_post_login.return_value = response_login
                 app.run()
                 assert mocked_return_args_partial_contains_string(mock_print, 'Unable to log in with provided credentials.')
+
+@mock.patch("builtins.print")
+def test_login_prints_connection_error_if_server_cannot_be_reached(mock_print, invalid_token, valid_username, valid_password):
+    with patch('builtins.input', side_effect=['1', valid_username, '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                app: App = App()
+                mocked_post_login.side_effect = ConnectionError("")
+                app.run()
+                assert mocked_return_args_partial_contains_string(mock_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+def test_logout_prints_connection_error_if_server_cannot_be_reached(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '5', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_post_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_logout_request') as mocked_post_logout:
+                        mocked_post_logout.side_effect = ConnectionError("")
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
 
 @mock.patch("builtins.print")
 def test_registration_of_user_with_already_existing_username_prints_error(mocked_print,valid_username, valid_email, valid_password):
@@ -832,3 +862,97 @@ def test_add_dog_print_server_error_in_case_server_reject_operation(mocked_post_
                     app: App = App()
                     app.run()
                     assert mocked_return_args_partial_contains_string(mocked_print, "TEST_ERROR")
+
+
+@pytest.fixture
+def dogs_json():
+    return [{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+             'entry_date': '2023-12-16', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
+             'picture': ''}, {'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
+             'birth_date': '2023-12-04', 'entry_date': '2023-12-08', 'neutered': True,
+            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''},
+            {'id': 15, 'name': 'Somedog', 'breed': 'Affenpinscher', 'sex': 'F',
+             'birth_date': '2023-12-11', 'entry_date': '2023-12-17', 'neutered': False,
+             'description': 'some desc', 'estimated_adult_size': 'M', 'picture': ''}]
+
+@pytest.fixture
+def single_batch_json():
+    return [{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+             'entry_date': '2023-12-16', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
+             'picture': ''},{'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
+             'birth_date': '2023-12-04', 'entry_date': '2023-12-08', 'neutered': True,
+            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''}]
+
+
+def test_create_dog_from_json_creates_dog_with_specified_attributes(dogs_json):
+    dog_json = dogs_json[0]
+    app: App = App()
+    dog: Dog = app.create_dog_from_json(dog_json)
+    assert (dog.name.value == 'Toby' and dog.dog_id.value == 13 and
+            dog.birth_info.breed.value == 'Half-breed' and dog.birth_info.sex.value == 'M'
+            and dog.birth_info.birth_date == Date.parse_date('2023-12-16') and
+            dog.entry_date == Date.parse_date('2023-12-16') and dog.neutered == False
+            and dog.description.value == '' and dog.birth_info.estimated_adult_size.value == 'M'
+            and dog.picture.value == '')
+
+def test_create_dog_list_from_json_creates_dog_list_of_correct_size_with_specified_attributes(dogs_json):
+    app: App = App()
+    all_dogs: List[Dog] = app.create_dog_list_from_json(dogs_json)
+    assert 3 == len(all_dogs)
+
+@mock.patch("builtins.print")
+def test_print_dogs_prints_dogs_inside_dog_list_2_batches(mocked_print, dogs_json):
+    with patch('builtins.input', side_effect=['y']):
+        app: App = App()
+        all_dogs = app.create_dog_list_from_json(dogs_json)
+        app.print_dogs(all_dogs)
+        for dog in all_dogs:
+            assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
+
+@mock.patch("builtins.print")
+def test_print_dogs_prints_dogs_inside_dog_list_1_batch(mocked_print, single_batch_json):
+    app: App = App()
+    all_dogs = app.create_dog_list_from_json(single_batch_json)
+    app.print_dogs(all_dogs)
+    for dog in all_dogs:
+        assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
+
+@mock.patch("builtins.print")
+def test_show_dogs_prints_retreived_dogs_from_show_dogs(mocked_print, single_batch_json):
+    with patch('builtins.input', side_effect=['2', '1', '0']):
+        app: App = App()
+        with patch.object(doghousetui.App.App, 'make_dogs_request') as mocked_show_dogs_get:
+            response = Mock(status_code=200)
+            response.json.return_value = single_batch_json
+            mocked_show_dogs_get.return_value = response
+            all_dogs = app.create_dog_list_from_json(single_batch_json)
+            app.run()
+            for dog in all_dogs:
+                assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
+
+@mock.patch("builtins.print")
+def test_show_dogs_prints_connection_error_upon_exception_from_request(mocked_print, single_batch_json):
+    with patch('builtins.input', side_effect=['2', '1', '0']):
+        app: App = App()
+        with patch.object(doghousetui.App.App, 'make_dogs_request') as mocked_show_dogs_get:
+            mocked_show_dogs_get.side_effect = ConnectionError("")
+            app.run()
+            assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+def test_remove_dog_prints_connection_error_upon_exception_from_request(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+                    mocked_post_login.return_value = response
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with patch.object(doghousetui.App.App, 'make_dog_remove_request') as mocked_remove_dog_request:
+                        mocked_remove_dog_request.side_effect = ConnectionError("")
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)

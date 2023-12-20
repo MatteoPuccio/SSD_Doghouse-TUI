@@ -181,9 +181,11 @@ class App:
         except ValidationError:
             print(Utils.INVALID_PASSWORD_ERROR)
             return
-
-        response: Response = self.make_login_request(username, password)
-
+        try:
+            response: Response = self.make_login_request(username, password)
+        except Exception:
+            print(Utils.CONNECTION_ERROR)
+            return
         if 200 == response.status_code:
             json_response = response.json()
             try:
@@ -207,7 +209,11 @@ class App:
             self.__switch_menu(self.__login_menu)
 
     def __logout(self):
-        response: Response = self.make_logout_request()
+        try:
+            response: Response = self.make_logout_request()
+        except Exception:
+            print(Utils.CONNECTION_ERROR)
+            return
         if 200 == response.status_code:
             self.__token = Utils.DEFAULT_TOKEN_VALUE
             print(Utils.LOGOUT_MESSAGE)
@@ -332,26 +338,17 @@ class App:
         return requests.delete(f'{Utils.API_SERVER_DOGS}{dog_id.value}/',
                                headers={'Authorization': f'Token {self.__token}'})
 
-    def __show_dogs(self):
-        try:
-            dogs_response: Response = self.make_dogs_request()
-        except Exception:
-            print(Utils.CONNECTION_ERROR)
-            return
-        print(dogs_response.status_code)
-        print(dogs_response.json())
-        if dogs_response.status_code == 200:
-            dogs = dogs_response.json()
-            all_dogs: List[Dog] = []
-            for dog_json in dogs:
-                try:
-                    dog = self.__create_dog_from_json(dog_json)
-                    all_dogs.append(dog)
-                except ValidationError as e:
-                    print(Utils.DOG_RECEIVED_ERROR)
+    def create_dog_list_from_json(self, dogs) -> List[Dog]:
+        all_dogs: List[Dog] = []
+        for dog_json in dogs:
+            try:
+                dog = self.create_dog_from_json(dog_json)
+                all_dogs.append(dog)
+            except ValidationError as e:
+                print(Utils.DOG_RECEIVED_ERROR)
+        return all_dogs
 
-        else:
-            print(Utils.SHOW_DOGS_ERROR)
+    def print_dogs(self, all_dogs: List[Dog]):
         if len(all_dogs) <= Utils.SHOW_DOGS_BATCH_SIZE:
             for dog in all_dogs:
                 print(dog.extended_representation())
@@ -371,7 +368,22 @@ class App:
                     wants_more = False
                 start_idx += Utils.SHOW_DOGS_BATCH_SIZE
 
-    def __create_dog_from_json(self, json) -> Dog:
+    def __show_dogs(self):
+        try:
+            dogs_response: Response = self.make_dogs_request()
+        except Exception:
+            print(Utils.CONNECTION_ERROR)
+            return
+        print(dogs_response.status_code)
+        print(dogs_response.json())
+        if dogs_response.status_code == 200:
+            all_dogs: List[Dog] = self.create_dog_list_from_json(dogs_response.json())
+
+        else:
+            print(Utils.SHOW_DOGS_ERROR)
+        self.print_dogs()
+
+    def create_dog_from_json(self, json) -> Dog:
         # name picture description are optional
         dogBuilder: Dog.Builder = Dog.Builder(id=DogId(int(json['id'])),
                                               dog_birth_info=DogBirthInfo(Breed(json['breed']),
@@ -380,7 +392,7 @@ class App:
                                                                                  EstimatedAdultSize(json[
                                                                                      'estimated_adult_size'])),
                                               entry_date=Date.parse_date(json['entry_date']),
-                                              neutered=True)  # eval(json['neutered'])
+                                              neutered=json['neutered'])
         if 'description' in json:
             dogBuilder.with_description(DogDescription(json['description']))
         if 'name' in json:

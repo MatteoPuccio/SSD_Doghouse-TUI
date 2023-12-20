@@ -70,11 +70,11 @@ INVALID_MENU_SELECTION = 'Invalid selection. Please, try again...'
 
 DATE_WRONG_FORMAT_MESSAGE = 'Expected iso format string'
 INVALID_TOKEN = 'The received token is not valid'
-
+DOG_BIRTH_AFTER_ENTRY="Invalid dog: entry date was before birth date."
 SHOW_DOGS_ERROR = 'There was an error while retrieving dogs'
 DOG_RECEIVED_ERROR = 'Found corrupted dog data for a dog, ignored'
 SHOW_DOGS_BATCH_SIZE = 2
-WANTS_MORE_QUESTION = 'Want more?(y/n)'
+WANTS_MORE_QUESTION = 'Want more?(y/n) '
 WANTS_MORE_YES_ANSWER = 'y'
 REQUIRE_INPUT_DOG_DATA = "Insert dog data"
 DOG_ID_INPUT = '\t id: '

@@ -10,7 +10,7 @@ from requests import Response
 from valid8 import ValidationError
 
 import doghousetui
-from doghousetui import Utils, Helpmsg_utils
+from doghousetui import Utils
 from doghousetui.App import App, main
 from doghousetui.domain import Dog, DogDescription, DogBirthInfo, Date, PictureUrl, Dogname, DogId, EstimatedAdultSize, \
     Sex, Breed
@@ -524,6 +524,7 @@ def test_failed_get_preferences_due_to_connection_error_prints_error_message(moc
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
 
+
 @mock.patch("builtins.print")
 def test_failed_add_preferences_due_to_connection_error_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
     with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
@@ -560,23 +561,32 @@ def test_failed_remove_preferences_due_to_connection_error_prints_error_message(
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
 
-# @mock.patch("builtins.print")
-# def test_succeeded_get_preferences_prints_returned_dog_ids(mocked_print, valid_username, valid_password, valid_token):
-#     with patch('builtins.input', side_effect=['1', valid_username, '2', '0']):
-#         with patch('getpass.getpass', side_effect=[valid_password]):
-#             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
-#                 with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
-#                     response_login = Mock(status_code=200)
-#                     response_login.json.return_value = {"key": valid_token}
-#                     mocked_login.return_value = response_login
-#                     response_role = Mock(status_code=200)
-#                     response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
-#                     mocked_post_role.return_value = response_role
-#                     with mock.patch.object(doghousetui.App.App, 'make_show_preferences_request') as mocked_get:
-#                         mocked_get.side_effect = ConnectionError("")
-#                         app: App = App()
-#                         app.run()
-#                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+@mock.patch("builtins.print")
+def test_succeeded_get_preferences_called_print_dogs_after_parse_response(mocked_print, valid_username, valid_password, valid_token, single_batch_json, valid_dogBuilder):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_show_preferences_request') as mocked_get:
+                        with patch.object(doghousetui.App.App, 'print_dogs') as mocked_print_dogs:
+                            with patch.object(doghousetui.App.App, 'create_dog_list_from_json') as mocked_create_dogs_from_json:
+                                response_preferences = Mock(status_code=200)
+                                response_preferences.json.return_value = single_batch_json
+                                mocked_get.return_value=response_preferences
+                                dogs:list = [valid_dogBuilder.build()]
+                                mocked_create_dogs_from_json.return_value = dogs
+                                app: App = App()
+                                app.run()
+                                mocked_create_dogs_from_json.assert_called_with(single_batch_json)
+                                mocked_print_dogs.assert_called_with(dogs)
+
+
 
 @mock.patch("builtins.print")
 def test_succeeded_add_preference_prints_correctly_added_message(mocked_print, valid_username, valid_password, valid_token):
@@ -787,6 +797,28 @@ def test_add_dog_essentials_and_empty_dog_optional_fields_with_valid_input_produ
                     app.run()
                     assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ADDED_MESSAGE)
 
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_add_dog_request')
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_dog_with_invalid_breed_call_method_of_suggestions_of_breed_and_print_suggestions(mocked_post_role, mocked_request, mocked_print, valid_dogBuilder, valid_username, valid_password, valid_token, valid_entry_date):
+    with patch('builtins.input', side_effect=['1', valid_username, '2',"INVALID_DOG_BREED", "Bolognese","M",valid_entry_date,"L", valid_entry_date, "Y","","","" , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post:
+                    with patch.object(doghousetui.domain.Breed, 'similar_breeds') as mocked_similar_breeds:
+                        response_role = Mock(status_code=200)
+                        response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                        mocked_post_role.return_value = response_role
+                        response_request = Mock(status_code=201)
+                        mocked_request.return_value = response_request
+                        app: App = App()
+                        response = Mock(status_code=200)
+                        response.json.return_value = {"key": valid_token}
+                        mocked_post.return_value = response
+                        mocked_similar_breeds.return_value = ["DOG_BREED_OF_TESTING"]
+                        app.run()
+                        mocked_similar_breeds.assert_called()
+                        mocked_similar_breeds.assert_called()
+                        assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, "DOG_BREED_OF_TESTING",1)
 
 
 @mock.patch("builtins.print")
@@ -828,7 +860,7 @@ def test_add_dog_essential_and_dog_options_fields_with_invalid_dog_not_call_requ
                         app: App = App()
                         app.run()
                         mocked_add_dog_request.assert_not_called()
-                        assert mocked_return_args_partial_contains_string(mocked_print, Helpmsg_utils.DOG_BIRTH_AFTER_ENTRY)
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_BIRTH_AFTER_ENTRY)
 
 
 @mock.patch("builtins.print")
@@ -890,6 +922,14 @@ def dogs_json():
              'description': 'some desc', 'estimated_adult_size': 'M', 'picture': ''}]
 
 @pytest.fixture
+def dogs_list():
+    return [Dog.Builder(DogId(13), DogBirthInfo(Breed('Half-breed'), Sex("M"), Date.parse_date('2023-12-16'), EstimatedAdultSize("S")),  Date.parse_date('2023-12-16'),False).build(),
+            Dog.Builder(DogId(14), DogBirthInfo(Breed('Half-breed'), Sex("M"), Date.parse_date('2023-12-16'), EstimatedAdultSize("S")),  Date.parse_date('2023-12-16'),False).build(),
+            Dog.Builder(DogId(15), DogBirthInfo(Breed('Half-breed'), Sex("M"), Date.parse_date('2023-12-16'), EstimatedAdultSize("S")),  Date.parse_date('2023-12-16'),False).build(),
+            Dog.Builder(DogId(16), DogBirthInfo(Breed('Half-breed'), Sex("M"), Date.parse_date('2023-12-16'), EstimatedAdultSize("S")),  Date.parse_date('2023-12-16'),False).build(),
+            ]
+
+@pytest.fixture
 def single_batch_json():
     return [{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
              'entry_date': '2023-12-16', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
@@ -909,26 +949,36 @@ def test_create_dog_from_json_creates_dog_with_specified_attributes(dogs_json):
             and dog.description.value == '' and dog.birth_info.estimated_adult_size.value == 'M'
             and dog.picture.value == '')
 
-def test_create_dog_list_from_json_creates_dog_list_of_correct_size_with_specified_attributes(dogs_json):
+def test_create_dog_list_from_json_creates_dog_list_of_correct_size(dogs_json):
     app: App = App()
     all_dogs: List[Dog] = app.create_dog_list_from_json(dogs_json)
     assert 3 == len(all_dogs)
 
 @mock.patch("builtins.print")
-def test_print_dogs_prints_dogs_inside_dog_list_2_batches(mocked_print, dogs_json):
+def test_print_dogs_prints_dogs_inside_dog_list_2_batches(mocked_print, dogs_list):
     with patch('builtins.input', side_effect=['y']):
         app: App = App()
-        all_dogs = app.create_dog_list_from_json(dogs_json)
-        app.print_dogs(all_dogs)
-        for dog in all_dogs:
+        app.print_dogs(dogs_list)
+        for dog in dogs_list:
             assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
 
 @mock.patch("builtins.print")
-def test_print_dogs_prints_dogs_inside_dog_list_1_batch(mocked_print, single_batch_json):
+def test_print_dogs_prints_dogs_inside_dog_list_2_batches_prints_only_first_batch_if_n_as_input(mocked_print, dogs_list):
+    with patch('builtins.input', side_effect=['n']):
+        app: App = App()
+        app.print_dogs(dogs_list)
+        for i in range(0, Utils.SHOW_DOGS_BATCH_SIZE):
+            assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ID_PRINT+str(dogs_list[i].dog_id.value))
+        for i in range(Utils.SHOW_DOGS_BATCH_SIZE, len(dogs_list)):
+            assert not mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ID_PRINT+str(dogs_list[i].dog_id.value))
+
+
+@mock.patch("builtins.print")
+def test_print_dogs_prints_dogs_inside_dog_list_1_batch(mocked_print, dogs_list):
     app: App = App()
-    all_dogs = app.create_dog_list_from_json(single_batch_json)
-    app.print_dogs(all_dogs)
-    for dog in all_dogs:
+    dogs_list_one = [dogs_list[0]]
+    app.print_dogs(dogs_list_one)
+    for dog in dogs_list_one:
         assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
 
 @mock.patch("builtins.print")
@@ -939,10 +989,19 @@ def test_show_dogs_prints_retreived_dogs_from_show_dogs(mocked_print, single_bat
             response = Mock(status_code=200)
             response.json.return_value = single_batch_json
             mocked_show_dogs_get.return_value = response
-            all_dogs = app.create_dog_list_from_json(single_batch_json)
             app.run()
-            for dog in all_dogs:
-                assert mocked_return_args_partial_contains_string(mocked_print, str(dog.dog_id.value))
+            for dog in single_batch_json:
+                assert mocked_return_args_partial_contains_string(mocked_print, str(dog["id"]))
+
+
+@mock.patch("builtins.print")
+def test_show_dogs_prints_retreived_dogs_from_show_dogs_receive_corrupted_data_print_error(mocked_print):
+    with patch('builtins.input', side_effect=['2', '1', '0']):
+        app: App = App()
+        with patch.object(doghousetui.App.App, 'make_dogs_request') as mocked_show_dogs_get:
+            response = Mock(status_code=400)
+            app.run()
+            assert mocked_return_args_partial_contains_string(mocked_print, Utils.SHOW_DOGS_ERROR)
 
 @mock.patch("builtins.print")
 def test_show_dogs_prints_connection_error_upon_exception_from_request(mocked_print, single_batch_json):
@@ -971,6 +1030,31 @@ def test_remove_dog_prints_connection_error_upon_exception_from_request(mocked_p
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
 
+
+@mock.patch('builtins.print')
+def test_show_dogs_with_filters_prints_connection_error_if_server_is_not_reachable(mocked_print):
+    with patch('builtins.input', side_effect=['2', '2', 'Half-breed', 'M', '2023', '2023', '0']):
+        app: App = App()
+        with patch.object(doghousetui.App.App, 'make_dogs_with_filters_request') as mocked_show_dogs_get:
+            mocked_show_dogs_get.side_effect = ConnectionError("")
+            app.run()
+            assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+
+@mock.patch('builtins.print')
+def test_read_dog_id_prints_error_when_invalid_error(mocked_print):
+    with patch('builtins.input', side_effect=['-1', 'a', '3']):
+        app: App = App()
+        app.read_dog_id()
+        assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print,Utils.DOG_ID_VALIDATION_ERROR, 2)
+
+@mock.patch("builtins.print")
+def test_create_dogs_list_from_json_receive_invalid_dog_print_error(mocked_print):
+    app:App = App()
+    app.create_dog_list_from_json([{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+      'entry_date': '2023-12-15', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
+      'picture': ''}])
+    mocked_print.assert_called_with(Utils.DOG_RECEIVED_ERROR)
 
 @mock.patch('builtins.print')
 def test_main_app_print_panic_error_for_unhandled_errors(mocked_print):

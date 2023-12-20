@@ -11,7 +11,7 @@ from typing import Optional, ClassVar, Any
 from dataclasses import field
 
 from datetime import date, timedelta
-from doghousetui import Utils, Helpmsg_utils
+from doghousetui import Utils
 from doghousetui.Exception import DateWrongFormatError
 from validation.regex import pattern
 from difflib import SequenceMatcher
@@ -126,10 +126,6 @@ class DogDescription:
     def __post_init__(self):
         validate("dog description", self.value, min_len=0, max_len=400, custom=pattern(r"^[a-zA-Z0-9,;. \-\t?!]*$"))
 
-    def __eq__(self, other):
-        if not isinstance(other, DogDescription):
-            return False
-        return self.value == other.value
     def is_default(self):
         return self.value == ""
 
@@ -239,7 +235,7 @@ class Dog:
         __dog: Optional['Dog']
         __create_key = object()
 
-        def __init__(self, id: DogId, dog_birth_info: DogBirthInfo, entry_date: Date, neutered: bool,):
+        def __init__(self, id: DogId, dog_birth_info: DogBirthInfo, entry_date: Date, neutered: bool):
             self.__dog = Dog(id, dog_birth_info, entry_date, neutered, Dog.Builder.__create_key)
 
         @staticmethod
@@ -263,6 +259,6 @@ class Dog:
 
         def build(self) -> 'Dog':
             validate('dog', self.__dog)
-            validate('dog.entry', self.__dog._is_entry_after_birth(), equals=True, help_msg=Helpmsg_utils.DOG_BIRTH_AFTER_ENTRY)
+            validate('dog.entry', self.__dog._is_entry_after_birth(), equals=True, help_msg=Utils.DOG_BIRTH_AFTER_ENTRY)
             res, self.__dog = self.__dog, None
             return res

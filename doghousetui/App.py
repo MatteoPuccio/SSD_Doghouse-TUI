@@ -82,7 +82,7 @@ class App:
 
         self.__current_menu: Menu = self.__login_menu
 
-    def __read_dog_id(self) -> DogId:
+    def read_dog_id(self) -> DogId:
         invalid = True
         while invalid:
             invalid = False
@@ -131,9 +131,6 @@ class App:
         description: str = input(message)
         return DogDescription(description)
 
-    def __read_breed(self, message) -> Breed:
-        breed: str = input(message)
-        return Breed(breed)
 
     def __read_sex(self, message) -> Sex:
         sex: str = input(message)
@@ -298,7 +295,7 @@ class App:
         self.print_dogs(self.create_dog_list_from_json(response.json()))
 
     def __add_preference(self):
-        input_id: DogId = self.__read_dog_id()
+        input_id: DogId = self.read_dog_id()
         try:
             response: Response = self.make_add_preference_to_dog_request(input_id.value)
         except Exception:
@@ -312,7 +309,7 @@ class App:
             App.__print_add_preference_errors(response.json())
 
     def __remove_preference(self):
-        input_id: DogId = self.__read_dog_id()
+        input_id: DogId = self.read_dog_id()
         try:
             response: Response = self.make_remove_preference_to_dog_request(input_id.value)
         except Exception:
@@ -463,6 +460,7 @@ class App:
                     print(f"{b}  ", end="")
                 print()
                 valid = False
+        return breed
 
     def __read_dog_birth_info(self) -> DogBirthInfo:
         dog_breed = self.__read_breed_until_valid()
@@ -499,6 +497,18 @@ class App:
         return Dog.Builder(default_add_id, dog_birt_info, dog_entry_date, dog_neutered)
 
     def make_add_dog_request(self, dog: Dog):
+        try:
+            dog.birth_info.breed.value
+        except:
+            print("Pénguinos")
+        try:
+            dog.birth_info.estimated_adult_size.value
+        except:
+            print("Pénguinos2")
+        try:
+            dog.birth_info.sex.value
+        except:
+            print("Pénguinos3")
         json = {
                 "entry_date": str(dog.entry_date),
                 "neutered": dog.neutered,

@@ -224,13 +224,13 @@ class Dog:
         return self.picture != PictureUrl()
 
     def compact_representation(self):
-        return f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}\n'
+        return f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}'
 
     def extended_representation(self):
         return (f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n' \
                 f'{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}\n{Utils.DOG_NEUTERED_PRINT}{self.neutered}\n' \
                 f'{Utils.DOG_NAME_PRINT}{self.name.value}\n{Utils.DOG_DESCRIPTION_PRINT}{self.description.value}\n' \
-                f'{Utils.DOG_PICTURE_PRINT}{self.picture.value}\n')
+                f'{Utils.DOG_PICTURE_PRINT}{self.picture.value}')
 
 
     @typechecked

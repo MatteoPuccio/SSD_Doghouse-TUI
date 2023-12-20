@@ -44,7 +44,9 @@ class App:
             .with_entry(
             MenuEntry.create('4', Utils.REMOVE_PREFERENCE_ENTRY, on_selected=lambda: self.__remove_preference())) \
             .with_entry(
-            MenuEntry.create('5', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
+            MenuEntry.create('5', Utils.SHOW_DOGS_WITH_FILTER_ENTRY, on_selected=lambda: self.__show_dogs_with_filters())) \
+            .with_entry(
+            MenuEntry.create('6', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
@@ -59,7 +61,9 @@ class App:
             .with_entry(
             MenuEntry.create('6', Utils.REMOVE_PREFERENCE_ENTRY, on_selected=lambda: self.__remove_preference())) \
             .with_entry(
-            MenuEntry.create('7', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
+            MenuEntry.create('7', Utils.SHOW_DOGS_WITH_FILTER_ENTRY, on_selected=lambda: self.__show_dogs_with_filters())) \
+            .with_entry(
+            MenuEntry.create('8', Utils.LOGOUT_ENTRY, is_exit=True, on_selected=lambda: self.__logout())) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
             .build()
@@ -67,7 +71,10 @@ class App:
         self.__not_logged_menu = Menu.Builder(Description(Utils.GENERIC_USER_MENU_DESCRIPTION)) \
             .with_entry(MenuEntry.create('1', Utils.SHOW_DOGS_ENTRY, on_selected=lambda: self.__show_dogs())) \
             .with_entry(
-            MenuEntry.create('2', Utils.BACK_TO_LOGIN_MENU_ENTRY, is_exit=True,
+            MenuEntry.create('2', Utils.SHOW_DOGS_WITH_FILTER_ENTRY,
+                             on_selected=lambda: self.__show_dogs_with_filters())) \
+            .with_entry(
+            MenuEntry.create('3', Utils.BACK_TO_LOGIN_MENU_ENTRY, is_exit=True,
                              on_selected=lambda: self.__switch_menu(self.__login_menu))) \
             .with_entry(
             MenuEntry.create('0', Utils.EXIT_ENTRY, is_exit=True, on_selected=lambda: self.__close_app())) \
@@ -166,6 +173,18 @@ class App:
 
     def make_role_request(self) -> Response:
         return requests.get(Utils.API_SERVER_LOGIN_ROLE, headers={'Authorization': f'Token {self.__token}'})
+
+    def make_dogs_with_filters_request(self,breed_str:str, estimated_size_str:str, birthdate_lower_then_str:str, birthdate_greater_then_str:str) -> Response:
+        params_dict = {}
+        if breed_str != "":
+            params_dict["breed"] = breed_str
+        if estimated_size_str != "":
+            params_dict["estimated_adult_size"] = estimated_size_str
+        if birthdate_greater_then_str != "":
+            params_dict["birth_date_gte"] = birthdate_greater_then_str
+        if birthdate_lower_then_str != "":
+            params_dict["birth_date_lte"] = birthdate_lower_then_str
+        return requests.get(Utils.API_SERVER_DOGS, params=params_dict)
 
     def make_dogs_request(self) -> Response:
         return requests.get(Utils.API_SERVER_DOGS)
@@ -276,7 +295,7 @@ class App:
         except Exception:
             print(Utils.CONNECTION_ERROR)
             return
-        print(response.json())
+        self.print_dogs(self.create_dog_list_from_json(response.json()))
 
     def __add_preference(self):
         input_id: DogId = self.__read_dog_id()
@@ -350,15 +369,21 @@ class App:
 
     def print_dogs(self, all_dogs: List[Dog]):
         if len(all_dogs) <= Utils.SHOW_DOGS_BATCH_SIZE:
+            print()
             for dog in all_dogs:
+                print("=====================================")
                 print(dog.extended_representation())
+                print("=====================================")
         else:
             wants_more: bool = True
             start_idx = 0
             while wants_more:
+                print()
                 for i in range(start_idx, start_idx + Utils.SHOW_DOGS_BATCH_SIZE):
                     if i < len(all_dogs):
+                        print("=====================================")
                         print(all_dogs[i].extended_representation())
+                        print("=====================================")
 
                 if start_idx + Utils.SHOW_DOGS_BATCH_SIZE < len(all_dogs):
                     selection: str = input(Utils.WANTS_MORE_QUESTION)
@@ -368,20 +393,42 @@ class App:
                     wants_more = False
                 start_idx += Utils.SHOW_DOGS_BATCH_SIZE
 
+    def __read_filters(self):
+        breed_str: str = input(Utils.DOG_BREED_FILTER)
+        estimated_size_str: str = input(Utils.DOG_ESTIMATED_ADULT_SIZE_FILTER)
+        birthdate_lower_then_str: str = input(Utils.DOG_LOWER_BIRTH_DATE_INPUT)
+        birthdate_greater_then_str: str = input(Utils.DOG_GREATER_BIRTH_DATE_INPUT)
+        return breed_str, estimated_size_str, birthdate_lower_then_str, birthdate_greater_then_str
+
+
+    def __show_dogs_with_filters(self):
+        breed_str, estimated_size_str, birthdate_lower_then_str, birthdate_greater_then_str = self.__read_filters()
+        try:
+            dogs_response: Response = self.make_dogs_with_filters_request(breed_str, estimated_size_str, birthdate_lower_then_str, birthdate_greater_then_str)
+        except Exception:
+            print(Utils.CONNECTION_ERROR)
+            return
+
+        if dogs_response.status_code == 200:
+            all_dogs: List[Dog] = self.create_dog_list_from_json(dogs_response.json())
+        else:
+            print(Utils.SHOW_DOGS_ERROR)
+            return
+        self.print_dogs(all_dogs)
+
     def __show_dogs(self):
         try:
             dogs_response: Response = self.make_dogs_request()
         except Exception:
             print(Utils.CONNECTION_ERROR)
             return
-        print(dogs_response.status_code)
-        print(dogs_response.json())
         if dogs_response.status_code == 200:
             all_dogs: List[Dog] = self.create_dog_list_from_json(dogs_response.json())
 
         else:
             print(Utils.SHOW_DOGS_ERROR)
-        self.print_dogs()
+            return
+        self.print_dogs(all_dogs)
 
     def create_dog_from_json(self, json) -> Dog:
         # name picture description are optional
@@ -401,8 +448,24 @@ class App:
             dogBuilder.with_picture(PictureUrl(json['picture']))
         return dogBuilder.build()
 
+    def __read_breed_until_valid(self):
+        valid = False
+        while not valid:
+            breed_str: str = input(Utils.DOG_BREED_INPUT)
+            try:
+                breed : Breed = Breed(breed_str)
+                valid = True
+            except ValidationError:
+                print(Utils.INVALID_BREED)
+                print(Utils.SUGGEST_BREED_MESSAGE, end="")
+                similar_breeds:list = Breed.similar_breeds(breed_str)
+                for b in similar_breeds:
+                    print(f"{b}  ", end="")
+                print()
+                valid = False
+
     def __read_dog_birth_info(self) -> DogBirthInfo:
-        dog_breed = self.__repeat_until_valid(Utils.DOG_BREED_INPUT, Utils.INVALID_BREED, self.__read_breed)
+        dog_breed = self.__read_breed_until_valid()
         dog_sex = self.__repeat_until_valid(Utils.DOG_SEX_INPUT, Utils.INVALID_SEX, self.__read_sex)
         dog_birth_date = self.__repeat_until_valid(Utils.DOG_BIRTH_DATE_INPUT, Utils.INVALID_DATE, self.__read_date)
         dog_estimated_size = self.__repeat_until_valid(Utils.DOG_ESTIMATED_ADULT_SIZE_INPUT,
@@ -509,7 +572,10 @@ class App:
 
 def main(name: str):
     if name == '__main__':
-        App().run()
+        try:
+            App().run()
+        except Exception:
+            print(Utils.PANIC_ERROR)
 
 
 main(__name__)

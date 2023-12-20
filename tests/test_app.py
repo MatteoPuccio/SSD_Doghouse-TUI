@@ -11,7 +11,7 @@ from valid8 import ValidationError
 
 import doghousetui
 from doghousetui import Utils, Helpmsg_utils
-from doghousetui.App import App
+from doghousetui.App import App, main
 from doghousetui.domain import Dog, DogDescription, DogBirthInfo, Date, PictureUrl, Dogname, DogId, EstimatedAdultSize, \
     Sex, Breed
 
@@ -212,7 +212,7 @@ def test_app_login_valid_user_credentials_show_admin_menu(mocked_print, valid_pa
 @mock.patch("builtins.print")
 def test_app_logout_after_login_as_user_shows_login_menu_again(mocked_print, valid_username, valid_password,
                                                                valid_token):
-    with patch('builtins.input', side_effect=['1', valid_username, '5', '0']):
+    with patch('builtins.input', side_effect=['1', valid_username, '6', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
                 with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
@@ -235,7 +235,7 @@ def test_app_logout_after_login_as_user_shows_login_menu_again(mocked_print, val
 def test_app_logout_after_login_as_admin_shows_login_menu_again(mocked_print, valid_username, valid_password,
                                                                 valid_token):
     app: App = App()
-    with patch('builtins.input', side_effect=['1', valid_username, '7', '0']):
+    with patch('builtins.input', side_effect=['1', valid_username, '8', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
                 with mock.patch.object(doghousetui.App.App, 'make_role_request') as mocked_get_role:
@@ -256,7 +256,7 @@ def test_app_logout_after_login_as_admin_shows_login_menu_again(mocked_print, va
 
 @mock.patch("builtins.print")
 def test_app_logout_prints_error_message_upon_response_error(mocked_print, valid_username, valid_email, valid_password, valid_token):
-    with patch('builtins.input', side_effect=['1', valid_username, valid_email, '5', '0']):
+    with patch('builtins.input', side_effect=['1', valid_username, valid_email, '6', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
                 with mock.patch.object(doghousetui.App.App, 'make_role_request') as mocked_get_role:
@@ -277,7 +277,7 @@ def test_app_logout_prints_error_message_upon_response_error(mocked_print, valid
 
 @mock.patch("builtins.print")
 def test_app_back_to_login_after_continue_without_login_prints_login_menu(mocked_print):
-    with patch('builtins.input', side_effect=['2', '2', '0']):
+    with patch('builtins.input', side_effect=['2', '3', '0']):
         app: App = App()
         app.run()
         assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION, 2)
@@ -350,6 +350,20 @@ def test_app_registration_prints_error_on_second_password_different_from_first(m
                 assert mocked_return_args_partial_contains_string(mocked_print,
                                                                   Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE)
 
+@mock.patch("builtins.print")
+def test_app_registration_prints_error_on_second_password_invalid_print_validation_error(mocked_print, valid_username, valid_email
+                                                                               , invalid_password, valid_password):
+    with patch('builtins.input', side_effect=['3', valid_username, valid_email, '0']):
+        with patch('getpass.getpass',
+                   side_effect=[valid_password, invalid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_registration_request') as mocked_post:
+                response = Mock(status_code=200)
+                mocked_post.return_value = response
+                app: App = App()
+                app.run()
+                assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print,
+                                                                  Utils.REGISTRATION_PASSWORDS_DO_NOT_COINCIDE,1)
+
 
 @mock.patch("builtins.print")
 def test_login_prints_invalid_token_if_received_token_from_backend_is_invalid(mock_print, invalid_token, valid_username, valid_password):
@@ -389,7 +403,7 @@ def test_login_prints_connection_error_if_server_cannot_be_reached(mock_print, i
 
 @mock.patch("builtins.print")
 def test_logout_prints_connection_error_if_server_cannot_be_reached(mocked_print, valid_username, valid_password, valid_token):
-    with patch('builtins.input', side_effect=['1', valid_username, '5', '0']):
+    with patch('builtins.input', side_effect=['1', valid_username, '6', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
                 with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
@@ -956,3 +970,11 @@ def test_remove_dog_prints_connection_error_upon_exception_from_request(mocked_p
                         mocked_remove_dog_request.side_effect = ConnectionError("")
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+
+@mock.patch('builtins.print')
+def test_main_app_print_panic_error_for_unhandled_errors(mocked_print):
+    with patch.object(doghousetui.App.App, "run") as mocked_run:
+        mocked_run.side_effect = Exception("test panic error")
+        main("__main__")
+        mocked_print.assert_called_with(Utils.PANIC_ERROR)

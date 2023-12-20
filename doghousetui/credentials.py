@@ -21,11 +21,6 @@ class Token:
     def value(self):
         return self.__value
 
-    def __eq__(self, __o):
-        if isinstance(__o, Token):
-            return self.value == __o.value
-        return False
-
     def __hash__(self):
         self.__value.__hash__()
 

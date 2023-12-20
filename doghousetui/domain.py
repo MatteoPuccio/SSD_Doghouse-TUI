@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from doghousetui import Utils, Helpmsg_utils
 from doghousetui.Exception import DateWrongFormatError
 from validation.regex import pattern
-
+from difflib import SequenceMatcher
 
 @typechecked
 @dataclass(order=True, frozen=True)
@@ -44,20 +44,29 @@ class Breed:
             breeds: dict = json.load(json_file)
             return frozenset(breeds["dogs"])
 
-    __breeds: ClassVar[frozenset] = field(default=read_breeds())
-
-    def __post_init__(self):
-        validate("breed validation", self.value, min_len=2, max_len=60, custom=lambda v: v in Breed.__breeds)
+    breeds: ClassVar[frozenset] = field(default=read_breeds())
 
     @staticmethod
-    def read_breeds():
-        path_to_file: Path = Path(__file__).parent.parent / Utils.PATH_TO_BREED_JSON
-        with open(str(path_to_file), "r") as json_file:
-            breeds: dict = json.load(json_file)
-            return frozenset(breeds["dogs"])
+    def similar_breeds(searched_breed: str) -> list:
+        number_of_similar = 3
+        most_similar_breeds = []
+        min_ratio = 0.0
+        for breed in Breed.breeds:
+            ratio = SequenceMatcher(a=searched_breed.lower(), b=breed.lower()).ratio()
+            if len(most_similar_breeds) < number_of_similar:
+                most_similar_breeds.append((breed,ratio))
+                min_ratio = max(ratio, min_ratio)
 
-    def __str__(self):
-        return self.value
+            elif ratio > min_ratio:
+                most_similar_breeds[number_of_similar-1], min_ratio = (breed, ratio), ratio
+
+            most_similar_breeds.sort(key=lambda x: x[1],reverse=True)
+
+        return list(map(lambda x: x[0], most_similar_breeds))
+
+    def __post_init__(self):
+        validate("breed validation", self.value, min_len=2, max_len=60, custom=lambda v: v in Breed.breeds)
+
 
 @typechecked
 @dataclass(order=True, frozen=True)

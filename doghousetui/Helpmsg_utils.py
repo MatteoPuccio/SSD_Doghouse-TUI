@@ -1,0 +1,1 @@
+DOG_BIRTH_AFTER_ENTRY="Invalid dog: entry date was before birth date."

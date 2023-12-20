@@ -11,7 +11,7 @@ from typing import Optional, ClassVar, Any
 from dataclasses import field
 
 from datetime import date, timedelta
-from doghousetui import Utils
+from doghousetui import Utils, Helpmsg_utils
 from doghousetui.Exception import DateWrongFormatError
 from validation.regex import pattern
 
@@ -27,6 +27,9 @@ class Dogname:
     @property
     def value(self):
         return self.__value
+
+    def is_default(self):
+        return self.value == ""
 
 
 @typechecked
@@ -114,16 +117,22 @@ class DogDescription:
     def __post_init__(self):
         validate("dog description", self.value, min_len=0, max_len=400, custom=pattern(r"^[a-zA-Z0-9,;. \-\t?!]*$"))
 
+    def __eq__(self, other):
+        if not isinstance(other, DogDescription):
+            return False
+        return self.value == other.value
+    def is_default(self):
+        return self.value == ""
+
 
 @typechecked
 @dataclass(order=True, frozen=True)
 class EstimatedAdultSize:
-    value: Optional[str]
+    value: str
 
     def __post_init__(self):
         validate("size validation", self.value, min_len=0, max_len=7,
                  custom=lambda v: v in ["XS", "S", "M", "L", "XL"])
-
 
 @typechecked
 @dataclass(order=True, frozen=True)
@@ -132,7 +141,10 @@ class PictureUrl:
 
     def __post_init__(self):
         validate("picture url", self.value, min_len=0, max_len=60,
-                 custom=pattern(r"^(https\:\/\/imgur\.com\/[a-zA-Z0-9_]+)?$"))
+                 custom=pattern(r"^(https\:\/\/imgur\.com\/[a-zA-Z0-9_]+\.(jpeg|png|jpg))?$"))
+
+    def is_default(self):
+        return self.value == ""
 
 
 @typechecked
@@ -152,17 +164,7 @@ class DogBirthInfo:
     breed: Breed
     sex: Sex
     birth_date: Date
-    estimated_adult_size : EstimatedAdultSize
-    create_key: InitVar[Any]
-
-    __creation_key:Any = object()
-
-    def __post_init__(self, create_key: Any) -> None:
-        validate("creation key", create_key, equals=DogBirthInfo.__creation_key)
-
-    @staticmethod
-    def create( breed_str: str, sex_str:str, birth_date_str: str, estimated_adult_size:str ) -> 'DogBirthInfo':
-        return DogBirthInfo(Breed(breed_str), Sex(sex_str), Date.parse_date(birth_date_str), EstimatedAdultSize(estimated_adult_size), DogBirthInfo.__creation_key)
+    estimated_adult_size: EstimatedAdultSize
 
     def age(self) -> int:
         return self.birth_date.calculate_years_to_today()
@@ -190,7 +192,7 @@ class Dog:
 
     def _add_description(self, description: DogDescription,create_key:Any):
         validate("add description with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.__description = description
+        self.description = description
 
     def _add_picture(self, picture: PictureUrl, create_key:Any):
         validate("add picture with builder", create_key, custom=Dog.Builder.is_valid_key)
@@ -202,6 +204,15 @@ class Dog:
     def _add_name(self, dogname: Dogname, create_key: Any):
         validate("add dogname with builder", create_key, custom=Dog.Builder.is_valid_key)
         self.name = dogname
+
+    def has_name(self) -> bool:
+        return  self.name != Dogname()
+
+    def has_description(self) -> bool:
+        return self.description != DogDescription()
+
+    def has_picture(self) -> bool:
+        return self.picture != PictureUrl()
 
     def compact_representation(self):
         return f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}\n'
@@ -243,6 +254,6 @@ class Dog:
 
         def build(self) -> 'Dog':
             validate('dog', self.__dog)
-            validate('dog.entry', self.__dog._is_entry_after_birth(), equals=True)
+            validate('dog.entry', self.__dog._is_entry_after_birth(), equals=True, help_msg=Helpmsg_utils.DOG_BIRTH_AFTER_ENTRY)
             res, self.__dog = self.__dog, None
             return res

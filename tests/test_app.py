@@ -9,8 +9,10 @@ from requests import Response
 from valid8 import ValidationError
 
 import doghousetui
-from doghousetui import Utils
+from doghousetui import Utils, Helpmsg_utils
 from doghousetui.App import App
+from doghousetui.domain import Dog, DogDescription, DogBirthInfo, Date, PictureUrl, Dogname, DogId, EstimatedAdultSize, \
+    Sex, Breed
 
 
 # @patch('builtins.input', side_effect=['1', 'username', 'password'])
@@ -167,25 +169,26 @@ def test_continue_without_login_prints_not_logged_user_menu(mocked_print):
             args, kwargs = call
             for a in args:
                 calls.append(a)
-                if Utils.NOT_LOGGED_MENU_DESCRIPTION in a:
+                if Utils.GENERIC_USER_MENU_DESCRIPTION in a:
                     printed = True
                     break
         assert printed
 
-
-
 @mock.patch("builtins.print")
-def test_app_login_valid_user_credentials_show_user_menu(mocked_print, valid_password, valid_username, valid_token):
+def test_app_login_valid_user_credentials_show_user_menu( mocked_print, valid_password, valid_username, valid_token):
     with patch('builtins.input', side_effect=['1', valid_username, '0', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post:
-                app: App = App()
-                response = Mock(status_code=200)
-                response.json.return_value = {"session_token": valid_token,
-                                              Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
-                mocked_post.return_value = response
-                app.run()
-                assert mocked_return_args_partial_contains_string(mocked_print, Utils.USER_MENU_DESCRIPTION)
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+                    mocked_post.return_value = response
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.USER_MENU_DESCRIPTION)
 
 
 @mock.patch("builtins.print")
@@ -193,13 +196,16 @@ def test_app_login_valid_user_credentials_show_admin_menu(mocked_print, valid_pa
     with patch('builtins.input', side_effect=['1', valid_username, '0', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post:
-                app: App = App()
-                response = Mock(status_code=200)
-                response.json.return_value = {"session_token": valid_token,
-                                              Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
-                mocked_post.return_value = response
-                app.run()
-                assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADMIN_MENU_DESCRIPTION)
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    app: App = App()
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+                    mocked_post.return_value = response
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADMIN_MENU_DESCRIPTION)
 
 
 @mock.patch("builtins.print")
@@ -211,8 +217,7 @@ def test_app_logout_after_login_as_user_shows_login_menu_again(mocked_print, val
                 with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
                     app: App = App()
                     response_login = Mock(status_code=200)
-                    response_login.json.return_value = {"key": valid_token,
-                                                        Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    response_login.json.return_value = {"key": valid_token}
                     mocked_post_login.return_value = response_login
                     response_role = Mock(status_code=200)
                     response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
@@ -229,7 +234,7 @@ def test_app_logout_after_login_as_user_shows_login_menu_again(mocked_print, val
 def test_app_logout_after_login_as_admin_shows_login_menu_again(mocked_print, valid_username, valid_password,
                                                                 valid_token):
     app: App = App()
-    with patch('builtins.input', side_effect=['1', valid_username, '4', '0']):
+    with patch('builtins.input', side_effect=['1', valid_username, '7', '0']):
         with patch('getpass.getpass', side_effect=[valid_password]):
             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
                 with mock.patch.object(doghousetui.App.App, 'make_role_request') as mocked_get_role:
@@ -395,6 +400,8 @@ def test_failed_registration_of_user_followed_by_login_menu(mocked_print,valid_u
                 app.run()
                 assert mocked_return_args_partial_contains_string_exactly_x_times(mocked_print, Utils.LOGIN_MENU_DESCRIPTION,2)
 
+
+
 @mock.patch("builtins.print")
 def test_failed_registration_of_user_failed_due_to_connection_error_prints_error_message(mocked_print,valid_username, valid_email, valid_password):
     with patch('builtins.input', side_effect=['3', valid_username, valid_email,'0']):
@@ -454,6 +461,177 @@ def test_registration_of_user_prints_registered_message_upon_registration_made( 
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.REGISTRATION_SUCCEEDED_MESSAGE)
 
+
+@mock.patch("builtins.print")
+def test_failed_get_preferences_due_to_connection_error_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_show_preferences_request') as mocked_get:
+                        mocked_get.side_effect = ConnectionError("")
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+def test_failed_add_preferences_due_to_connection_error_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_add_preference_to_dog_request') as mocked_get:
+                        mocked_get.side_effect = ConnectionError("")
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+def test_failed_remove_preferences_due_to_connection_error_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '4', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_remove_preference_to_dog_request') as mocked_get:
+                        mocked_get.side_effect = ConnectionError("")
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+# @mock.patch("builtins.print")
+# def test_succeeded_get_preferences_prints_returned_dog_ids(mocked_print, valid_username, valid_password, valid_token):
+#     with patch('builtins.input', side_effect=['1', valid_username, '2', '0']):
+#         with patch('getpass.getpass', side_effect=[valid_password]):
+#             with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+#                 with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+#                     response_login = Mock(status_code=200)
+#                     response_login.json.return_value = {"key": valid_token}
+#                     mocked_login.return_value = response_login
+#                     response_role = Mock(status_code=200)
+#                     response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+#                     mocked_post_role.return_value = response_role
+#                     with mock.patch.object(doghousetui.App.App, 'make_show_preferences_request') as mocked_get:
+#                         mocked_get.side_effect = ConnectionError("")
+#                         app: App = App()
+#                         app.run()
+#                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+def test_succeeded_add_preference_prints_correctly_added_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_add_preference_to_dog_request') as mocked_add_preference:
+                        response_add_preference = Mock(status_code=201)
+                        mocked_add_preference.return_value = response_add_preference
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADD_PREFERENCE_SUCCEEDED_MESSAGE)
+
+@mock.patch("builtins.print")
+def test_failed_add_preference_due_to_missing_dog_in_database_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_add_preference_to_dog_request') as mocked_add_preference:
+                        response_add_preference = Mock(status_code=404)
+                        response_add_preference.json.return_value = {'dog_id': 'some error'}
+                        mocked_add_preference.return_value = response_add_preference
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADD_PREFERENCE_FAILED_DOG_ID)
+
+@mock.patch("builtins.print")
+def test_failed_add_preference_due_to_already_present_preference_for_user_and_dog_print_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '3', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_add_preference_to_dog_request') as mocked_add_preference:
+                        response_add_preference = Mock(status_code=404)
+                        response_add_preference.json.return_value = {'non_field_errors': 'some error'}
+                        mocked_add_preference.return_value = response_add_preference
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADD_PREFERENCE_FAILED_DUPLICATE)
+
+@mock.patch("builtins.print")
+def test_succeeded_remove_preference_prints_correctly_removed_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '4', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_remove_preference_to_dog_request') as mocked_delete:
+                        response_mocked_delete = Mock(status_code=204)
+                        mocked_delete.return_value = response_mocked_delete
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.REMOVE_PREFERENCE_SUCCEEDED_MESSAGE)
+
+@mock.patch("builtins.print")
+def test_failed_remove_preference_prints_error_message(mocked_print, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '4', '12', '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_login:
+                with patch.object(doghousetui.App.App, 'make_role_request') as mocked_post_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token}
+                    mocked_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_USER_VALUE}
+                    mocked_post_role.return_value = response_role
+                    with mock.patch.object(doghousetui.App.App, 'make_remove_preference_to_dog_request') as mocked_delete:
+                        response_mocked_delete = Mock(status_code=404)
+                        mocked_delete.return_value = response_mocked_delete
+                        app: App = App()
+                        app.run()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Utils.REMOVE_PREFERENCE_FAILED_MESSAGE)
+
+
 @mock.patch("builtins.print")
 def test_remove_dog_prints_error_when_the_specified_dog_does_not_exist(mocked_print, valid_username, valid_password, valid_token):
     with patch('builtins.input', side_effect=['1', valid_username, '3', '2', '0']):
@@ -487,7 +665,7 @@ def test_remove_dog_prints_dog_removed_when_the_specified_dog_exist_and_is_elimi
                     response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
                     mocked_post_role.return_value = response_role
                     with patch.object(doghousetui.App.App, 'make_dog_remove_request') as mocked_delete:
-                        response_delete = Mock(status_code=200)
+                        response_delete = Mock(status_code=204)
                         mocked_delete.return_value = response_delete
                         app.run()
                         assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_DELETED_MESSAGE)
@@ -512,8 +690,145 @@ def test_remove_dog_prints_invalid_id_error_when_the_specified_id_is_invalid(moc
                     assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ID_VALIDATION_ERROR)
 
 
-# @mock.patch.object(doghousetui.App.App, 'make_registration_request')
-# def test_make_logout_request_makes_sends_logout_request(make_registration_request, requests_mock):
-#     app: App = App()
-#     app.make_logout_request()
-#     assert requests_mock.requests_post.called()
+@pytest.fixture
+def valid_DogId():
+    return 1
+
+
+@pytest.fixture
+def valid_Dogname():
+    return "Pippo"
+
+
+@pytest.fixture
+def valid_DogDescription():
+    return "description"
+
+
+@pytest.fixture
+def valid_DogBirthInfo():
+    return DogBirthInfo(Breed("Bolognese"), Sex("M"), Date.parse_date("2020-05-05"), EstimatedAdultSize("L"))
+
+
+@pytest.fixture
+def valid_entry_date():
+    return "2020-05-05"
+
+
+@pytest.fixture
+def valid_DogPicture():
+    return "https://imgur.com/Ada6755nsv.png"
+
+
+@pytest.fixture
+def valid_dogBuilder( valid_DogId, valid_DogBirthInfo, valid_entry_date):
+    return Dog.Builder(DogId(valid_DogId), valid_DogBirthInfo, Date.parse_date(valid_entry_date), True)
+
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_add_dog_request')
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_dog_essentials_and_empty_dog_optional_fields_with_valid_input_produce_dog_to_be_added(mocked_post_role, mocked_request, mocked_print, valid_dogBuilder, valid_username, valid_password, valid_token, valid_entry_date):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', "Bolognese","M",valid_entry_date,"L", valid_entry_date, "Y","","","" , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_post:
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+                    response_request = Mock(status_code=201)
+                    mocked_request.return_value = response_request
+                    app: App = App()
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+                    mocked_post.return_value = response
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ADDED_MESSAGE)
+
+
+
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_add_dog_request')
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_dog_essential_and_dog_options_fields_with_valid_input_produce_dog_to_be_added(mocked_post_role, mocked_add_dog_request, mocked_print, valid_dogBuilder, valid_Dogname, valid_DogDescription, valid_DogPicture, valid_username, valid_password, valid_token, valid_entry_date):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', "Bolognese","M",valid_entry_date,"L", valid_entry_date, "Y",valid_Dogname,valid_DogDescription,valid_DogPicture , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_login_post:
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+
+                    response_request = Mock(status_code=201)
+                    mocked_add_dog_request.return_value = response_request
+                    app: App = App()
+                    response = Mock(status_code=200)
+
+                    response.json.return_value = {"key": valid_token}
+                    mocked_login_post.return_value = response
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.DOG_ADDED_MESSAGE)
+
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_dog_essential_and_dog_options_fields_with_invalid_dog_not_call_request_and_print_invalid_dog_message(mocked_post_role, mocked_print, valid_dogBuilder, valid_Dogname, valid_DogDescription, valid_DogPicture, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', "Bolognese","M","2020-05-06","L", "2020-05-05", "Y",valid_Dogname,valid_DogDescription,valid_DogPicture , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_login_post:
+                    with patch.object(doghousetui.App.App, 'make_add_dog_request') as mocked_add_dog_request:
+                        response_role = Mock(status_code=200)
+                        response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                        mocked_post_role.return_value = response_role
+
+                        response = Mock(status_code=200)
+                        response.json.return_value = {"key": valid_token}
+
+                        mocked_login_post.return_value = response
+                        app: App = App()
+                        app.run()
+                        mocked_add_dog_request.assert_not_called()
+                        assert mocked_return_args_partial_contains_string(mocked_print, Helpmsg_utils.DOG_BIRTH_AFTER_ENTRY)
+
+
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_add_dog_request')
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_valid_dog_but_unable_to_contact_server_print_connection_error_message(mocked_post_role, mocked_add_dog_request, mocked_print, valid_dogBuilder, valid_Dogname, valid_DogDescription, valid_entry_date ,valid_DogPicture, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', "Bolognese","M",valid_entry_date,"L", valid_entry_date, "Y",valid_Dogname,valid_DogDescription,valid_DogPicture , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_login_post:
+
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+
+                    mocked_add_dog_request.side_effect = ConnectionError("test")
+
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+                    mocked_login_post.return_value = response
+
+                    app: App = App()
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.CONNECTION_ERROR)
+
+@mock.patch("builtins.print")
+@patch.object(doghousetui.App.App, 'make_add_dog_request')
+@patch.object(doghousetui.App.App, 'make_role_request')
+def test_add_dog_print_server_error_in_case_server_reject_operation(mocked_post_role, mocked_add_dog_request, mocked_print, valid_dogBuilder, valid_Dogname, valid_DogDescription, valid_entry_date ,valid_DogPicture, valid_username, valid_password, valid_token):
+    with patch('builtins.input', side_effect=['1', valid_username, '2', "Bolognese","M",valid_entry_date,"L", valid_entry_date, "Y",valid_Dogname,valid_DogDescription,valid_DogPicture , '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+                with patch.object(doghousetui.App.App, 'make_login_request') as mocked_login_post:
+                    response_role = Mock(status_code=200)
+
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_role.return_value = response_role
+
+                    response_add_dog_request = Mock(status_code=400)
+                    response_add_dog_request.json.return_value = {'non_field_errors':["TEST_ERROR"]}
+                    mocked_add_dog_request.return_value = response_add_dog_request
+
+                    response = Mock(status_code=200)
+                    response.json.return_value = {"key": valid_token}
+
+                    mocked_login_post.return_value = response
+                    app: App = App()
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, "TEST_ERROR")

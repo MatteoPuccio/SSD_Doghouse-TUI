@@ -136,11 +136,11 @@ def test_dog_breeds_must_belongs_to_default_breeds():
             Breed("Not in the default breeds")
 
 def test_pictureurl_can_be_empty_or_correct_url():
-    for i in ["", "https://imgur.com/6755v", "https://imgur.com/Ada6755nsv"]:
+    for i in ["", "https://imgur.com/6755v.jpeg", "https://imgur.com/Ada6755nsv.png"]:
         PictureUrl(i)
 
 def test_pictureurl_cannot_be_a_not_valid_url():
-    for i in ["aaahttps://imgur.com/6755vaaa", "http://imgur.com/6755v", "https://google.com/Ada6755nsv"]:
+    for i in ["aaahttps://imgur.com/6755vaaa", "https://imgur.com/6755v", "https://google.com/Ada6755nsv"]:
         with pytest.raises(ValidationError):
             PictureUrl(i)
 
@@ -151,70 +151,94 @@ def test_id_cannot_be_negative():
         with pytest.raises(ValidationError):
             DogId(-i)
 
+class TestDog:
 
-@pytest.fixture
-def valid_DogId():
-    return DogId(1)
+    @pytest.fixture
+    def valid_DogId(self):
+        return DogId(1)
 
-@pytest.fixture
-def valid_Dogname():
-    return Dogname()
+    @pytest.fixture
+    def valid_Dogname(self):
+        return Dogname("Pippo")
 
-@pytest.fixture
-def valid_DogDescription():
-    return DogDescription("description")
+    @pytest.fixture
+    def valid_DogDescription(self):
+        return DogDescription("description")
 
-@pytest.fixture
-def valid_DogBirthInfo():
-    return DogBirthInfo.create("Bolognese","M","2020-05-05","L")
-
-
-@pytest.fixture
-def valid_entry_date():
-    return Date.parse_date("2020-05-05")
+    @pytest.fixture
+    def valid_DogBirthInfo(self):
+        return DogBirthInfo(Breed("Bolognese"),Sex("M"),Date.parse_date("2020-05-05"),EstimatedAdultSize("L"))
 
 
-@pytest.fixture
-def valid_DogPicture():
-    return PictureUrl()
-
-@pytest.fixture
-def valid_dogBuilder(valid_DogId, valid_DogBirthInfo, valid_entry_date):
-    return Dog.Builder(valid_DogId,valid_DogBirthInfo, valid_entry_date, True)
+    @pytest.fixture
+    def valid_entry_date(self):
+        return Date.parse_date("2020-05-05")
 
 
-@pytest.mark.parametrize("today", [("2022-05-06",2 ), ("2021-05-05", 1),("2023-10-10",3 ), ("2020-05-05",0), ("2021-05-04",0)])
-def test_dog_birth_info_return_correct_age(valid_DogBirthInfo, today):
-    with freezegun.freeze_time(today[0]):
-        assert valid_DogBirthInfo.age() == today[1]
+    @pytest.fixture
+    def valid_DogPicture(self):
+        return PictureUrl("https://imgur.com/Ada6755nsv.png")
+
+    @pytest.fixture
+    def valid_dogBuilder(self,valid_DogId, valid_DogBirthInfo, valid_entry_date):
+        return Dog.Builder(valid_DogId,valid_DogBirthInfo, valid_entry_date, True)
 
 
-def test_dog_builder_cannot_create_dog_with_entry_after_birth_date(valid_DogId, valid_DogBirthInfo):
-    entry_date = date.fromisoformat(str(valid_DogBirthInfo.birth_date)) + datetime.timedelta(days=-1)
-    dog_builder = Dog.Builder(valid_DogId,valid_DogBirthInfo, Date(entry_date), True)
-    with pytest.raises(ValidationError):
+    @pytest.mark.parametrize("today", [("2022-05-06",2 ), ("2021-05-05", 1),("2023-10-10",3 ), ("2020-05-05",0), ("2021-05-04",0)])
+    def test_dog_birth_info_return_correct_age(self, valid_DogBirthInfo, today):
+        with freezegun.freeze_time(today[0]):
+            assert valid_DogBirthInfo.age() == today[1]
+
+
+    def test_dog_builder_cannot_create_dog_with_entry_after_birth_date(self,valid_DogId, valid_DogBirthInfo):
+        entry_date = date.fromisoformat(str(valid_DogBirthInfo.birth_date)) + datetime.timedelta(days=-1)
+        dog_builder = Dog.Builder(valid_DogId,valid_DogBirthInfo, Date(entry_date), True)
+        with pytest.raises(ValidationError):
+            dog_builder.build()
+
+
+    def test_dog_builder_add_dog_description_create_valid_dog(self,valid_dogBuilder,valid_DogDescription):
+       valid_dogBuilder.with_description(valid_DogDescription).build()
+
+    def test_dog_had_description_return_true_if_dog_has_description(self,valid_dogBuilder, valid_DogDescription):
+       dog:Dog = valid_dogBuilder.with_description(valid_DogDescription).build()
+       assert dog.has_description()
+
+    def test_dog_has_name_return_true_if_dog_has_not_default_name(self,valid_dogBuilder, valid_Dogname):
+       dog:Dog = valid_dogBuilder.with_dogname(valid_Dogname).build()
+       assert dog.has_name()
+
+    def test_dog_has_name_return_true_if_dog_has_not_default_name(self,valid_dogBuilder, valid_Dogname):
+       dog:Dog = valid_dogBuilder.build()
+       assert dog.has_name() == False
+
+    def test_dog_had_description_return_false_if_dog_has_not_a_description(self, valid_dogBuilder):
+       dog:Dog = valid_dogBuilder.build()
+       assert dog.has_description() == False
+
+    def test_dog_has_picture_return_true_if_dog_has_not_default_url_picture(self, valid_dogBuilder, valid_DogPicture):
+       dog:Dog = valid_dogBuilder.with_picture(valid_DogPicture).build()
+       assert dog.has_picture()
+
+    def test_dog_has_picture_return_false_if_dog_has_default_url_picture(self, valid_dogBuilder):
+       dog:Dog = valid_dogBuilder.build()
+       assert dog.has_picture() == False
+    def test_dog_builder_add_dog_name_create_valid_dog(self, valid_dogBuilder, valid_Dogname):
+        valid_dogBuilder.with_dogname(valid_Dogname).build()
+
+    def test_dog_builder_add_dog_picture_create_valid_dog(self, valid_dogBuilder, valid_DogPicture):
+        valid_dogBuilder.with_picture(valid_DogPicture).build()
+
+    def test_dog_builder_cannot_call_two_times_build(self, valid_DogId, valid_DogBirthInfo, valid_entry_date):
+        dog_builder = Dog.Builder(valid_DogId,valid_DogBirthInfo, valid_entry_date, True)
         dog_builder.build()
+        with pytest.raises(ValidationError):
+            dog_builder.build()
 
 
-def test_dog_builder_add_dog_description_create_valid_dog(valid_dogBuilder,valid_DogDescription):
-   valid_dogBuilder.with_description(valid_DogDescription).build()
-
-def test_dog_builder_add_dog_name_create_valid_dog(valid_dogBuilder, valid_Dogname):
-    valid_dogBuilder.with_dogname(valid_Dogname).build()
-
-def test_dog_builder_add_dog_picture_create_valid_dog(valid_dogBuilder, valid_DogPicture):
-    valid_dogBuilder.with_picture(valid_DogPicture).build()
-
-def test_dog_builder_cannot_call_two_times_build(valid_DogId, valid_DogBirthInfo, valid_entry_date):
-    dog_builder = Dog.Builder(valid_DogId,valid_DogBirthInfo, valid_entry_date, True)
-    dog_builder.build()
-    with pytest.raises(ValidationError):
-        dog_builder.build()
-
-
-def test_dog_cannot_be_created_with_constructor(valid_DogId, valid_DogBirthInfo, valid_entry_date):
-    with pytest.raises(ValidationError):
-        Dog(valid_DogId, valid_DogBirthInfo, valid_entry_date, True, object())
+    def test_dog_cannot_be_created_with_constructor(self, valid_DogId, valid_DogBirthInfo, valid_entry_date):
+        with pytest.raises(ValidationError):
+            Dog(valid_DogId, valid_DogBirthInfo, valid_entry_date, True, object())
 
 
 

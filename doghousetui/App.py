@@ -313,7 +313,6 @@ class App:
         except Exception:
             print(Utils.CONNECTION_ERROR)
             return
-        print(response.status_code)
         if response.status_code == 201:
             print(Utils.ADD_PREFERENCE_SUCCEEDED_MESSAGE)
         else:

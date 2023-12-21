@@ -368,7 +368,10 @@ class App:
     def create_dog_list_from_json(self, dogs) -> List[Dog]:
         all_dogs: List[Dog] = []
         for entry in dogs:
-            dog_json = entry['dog']
+            dog_json = entry
+            if "dog" in entry:
+                dog_json = entry['dog']
+
             try:
                 dog = self.create_dog_from_json(dog_json)
                 all_dogs.append(dog)

@@ -163,6 +163,12 @@ class TestBreed:
                 Breed(i)
 
 
+    def test_most_similar_breeds_must_return_valid_breeds_with_empty_string(self):
+        with mock.patch.object(doghousetui.domain.Breed, "breeds", frozenset(["Cihuahua", "Cimiao", "Scimiahua","cimiahua"])):
+            most_similar:list = Breed.similar_breeds("")
+            for i in most_similar:
+                Breed(i)
+
 class TestPictureUrl:
     def test_pictureurl_can_be_empty_or_correct_url(self):
         for i in ["", "https://imgur.com/6755v.jpeg", "https://imgur.com/Ada6755nsv.png"]:

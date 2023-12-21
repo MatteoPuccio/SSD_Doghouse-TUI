@@ -208,6 +208,24 @@ def test_app_login_valid_user_credentials_show_admin_menu(mocked_print, valid_pa
                     app.run()
                     assert mocked_return_args_partial_contains_string(mocked_print, Utils.ADMIN_MENU_DESCRIPTION)
 
+@mock.patch("builtins.print")
+def test_app_login_prints_error_on_invalid_role_received_by_backend(mocked_print, valid_username, valid_password,
+                                                                valid_token):
+    app: App = App()
+    with patch('builtins.input', side_effect=['1', valid_username, '0']):
+        with patch('getpass.getpass', side_effect=[valid_password]):
+            with mock.patch.object(doghousetui.App.App, 'make_login_request') as mocked_post_login:
+                with mock.patch.object(doghousetui.App.App, 'make_role_request') as mocked_get_role:
+                    response_login = Mock(status_code=200)
+                    response_login.json.return_value = {"key": valid_token,
+                                                        Utils.RESPONSE_ROLE_KEY: Utils.RESPONSE_USER_ROLE_ADMIN_VALUE}
+                    mocked_post_login.return_value = response_login
+                    response_role = Mock(status_code=200)
+                    response_role.json.return_value = {Utils.RESPONSE_ROLE_KEY: "Some useless unpredicted role"}
+                    mocked_get_role.return_value = response_role
+                    app.run()
+                    assert mocked_return_args_partial_contains_string(mocked_print, Utils.LOGIN_ERROR)
+
 
 @mock.patch("builtins.print")
 def test_app_logout_after_login_as_user_shows_login_menu_again(mocked_print, valid_username, valid_password,
@@ -1055,6 +1073,11 @@ def test_create_dogs_list_from_json_receive_invalid_dog_print_error(mocked_print
       'entry_date': '2023-12-15', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
       'picture': ''}])
     mocked_print.assert_called_with(Utils.DOG_RECEIVED_ERROR)
+
+def test_pack_filters_params_returns_a_correct_dictionary():
+    my_dict = {"breed": "Half-breed", "estimated_adult_size": "M", "birth_date_gte": "2023", "birth_date_lte": "2023"}
+    my_dict_packed = App().pack_filters_params("Half-breed", "M", "2023", "2023")
+    assert my_dict == my_dict_packed
 
 @mock.patch('builtins.print')
 def test_main_app_print_panic_error_for_unhandled_errors(mocked_print):

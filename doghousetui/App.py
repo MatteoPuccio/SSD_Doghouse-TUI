@@ -171,7 +171,8 @@ class App:
     def make_role_request(self) -> Response:
         return requests.get(Utils.API_SERVER_LOGIN_ROLE, headers={'Authorization': f'Token {self.__token}'})
 
-    def make_dogs_with_filters_request(self,breed_str:str, estimated_size_str:str, birthdate_lower_then_str:str, birthdate_greater_then_str:str) -> Response:
+    def pack_filters_params(self, breed_str: str, estimated_size_str:str, birthdate_lower_then_str: str,
+                             birthdate_greater_then_str: str):
         params_dict = {}
         if breed_str != "":
             params_dict["breed"] = breed_str
@@ -181,6 +182,12 @@ class App:
             params_dict["birth_date_gte"] = birthdate_greater_then_str
         if birthdate_lower_then_str != "":
             params_dict["birth_date_lte"] = birthdate_lower_then_str
+        return params_dict
+
+    def make_dogs_with_filters_request(self, breed_str: str, estimated_size_str: str, birthdate_lower_then_str: str,
+                                       birthdate_greater_then_str: str) -> Response:
+        params_dict = self.pack_filters_params_(breed_str, estimated_size_str, birthdate_lower_then_str,
+                                                birthdate_greater_then_str)
         return requests.get(Utils.API_SERVER_DOGS, params=params_dict)
 
     def make_dogs_request(self) -> Response:
@@ -219,6 +226,11 @@ class App:
                 self.__switch_menu(self.__logged_user_menu)
             elif role == Utils.RESPONSE_USER_ROLE_ADMIN_VALUE:
                 self.__switch_menu(self.__logged_admin_menu)
+            else:
+                print(Utils.LOGIN_ERROR)
+                self.__token = Token()
+                self.__switch_menu(self.__login_menu)
+                return
         else:
             print(Utils.LOGIN_ERROR)
             App.__print_login_errors(response.json())
@@ -497,18 +509,6 @@ class App:
         return Dog.Builder(default_add_id, dog_birt_info, dog_entry_date, dog_neutered)
 
     def make_add_dog_request(self, dog: Dog):
-        try:
-            dog.birth_info.breed.value
-        except:
-            print("Pénguinos")
-        try:
-            dog.birth_info.estimated_adult_size.value
-        except:
-            print("Pénguinos2")
-        try:
-            dog.birth_info.sex.value
-        except:
-            print("Pénguinos3")
         json = {
                 "entry_date": str(dog.entry_date),
                 "neutered": dog.neutered,

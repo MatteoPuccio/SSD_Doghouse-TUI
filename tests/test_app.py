@@ -789,7 +789,7 @@ def valid_entry_date():
 
 @pytest.fixture
 def valid_DogPicture():
-    return "https://imgur.com/Ada6755nsv.png"
+    return "https://i.imgur.com/Ada6755nsv.png"
 
 
 @pytest.fixture
@@ -930,14 +930,14 @@ def test_add_dog_print_server_error_in_case_server_reject_operation(mocked_post_
 
 @pytest.fixture
 def dogs_json():
-    return [{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+    return [{'user': 1, 'dog': {'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
              'entry_date': '2023-12-16', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
-             'picture': ''}, {'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
+             'picture': ''}},{'user': 1, 'dog':  {'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
              'birth_date': '2023-12-04', 'entry_date': '2023-12-08', 'neutered': True,
-            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''},
-            {'id': 15, 'name': 'Somedog', 'breed': 'Affenpinscher', 'sex': 'F',
+            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''}},
+            {'user': 1, 'dog': {'id': 15, 'name': 'Somedog', 'breed': 'Affenpinscher', 'sex': 'F',
              'birth_date': '2023-12-11', 'entry_date': '2023-12-17', 'neutered': False,
-             'description': 'some desc', 'estimated_adult_size': 'M', 'picture': ''}]
+             'description': 'some desc', 'estimated_adult_size': 'M', 'picture': ''}}]
 
 @pytest.fixture
 def dogs_list():
@@ -949,15 +949,15 @@ def dogs_list():
 
 @pytest.fixture
 def single_batch_json():
-    return [{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+    return [{'user': 1, 'dog': {'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
              'entry_date': '2023-12-16', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
-             'picture': ''},{'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
+             'picture': ''}},{'user': 1, 'dog': {'id': 14, 'name': 'Bigdog', 'breed': 'Afghan Hound', 'sex': 'M',
              'birth_date': '2023-12-04', 'entry_date': '2023-12-08', 'neutered': True,
-            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''}]
+            'description': 'some descr', 'estimated_adult_size': 'M', 'picture': ''}}]
 
 
 def test_create_dog_from_json_creates_dog_with_specified_attributes(dogs_json):
-    dog_json = dogs_json[0]
+    dog_json = dogs_json[0]['dog']
     app: App = App()
     dog: Dog = app.create_dog_from_json(dog_json)
     assert (dog.name.value == 'Toby' and dog.dog_id.value == 13 and
@@ -1008,7 +1008,8 @@ def test_show_dogs_prints_retreived_dogs_from_show_dogs(mocked_print, single_bat
             response.json.return_value = single_batch_json
             mocked_show_dogs_get.return_value = response
             app.run()
-            for dog in single_batch_json:
+            for entry in single_batch_json:
+                dog = entry['dog']
                 assert mocked_return_args_partial_contains_string(mocked_print, str(dog["id"]))
 
 
@@ -1069,9 +1070,9 @@ def test_read_dog_id_prints_error_when_invalid_error(mocked_print):
 @mock.patch("builtins.print")
 def test_create_dogs_list_from_json_receive_invalid_dog_print_error(mocked_print):
     app:App = App()
-    app.create_dog_list_from_json([{'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
+    app.create_dog_list_from_json([{'user':1, 'dog': {'id': 13, 'name': 'Toby', 'breed': 'Half-breed', 'sex': 'M', 'birth_date': '2023-12-16',
       'entry_date': '2023-12-15', 'neutered': False, 'description': '', 'estimated_adult_size': 'M',
-      'picture': ''}])
+      'picture': ''}}])
     mocked_print.assert_called_with(Utils.DOG_RECEIVED_ERROR)
 
 def test_pack_filters_params_returns_a_correct_dictionary():

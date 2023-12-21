@@ -146,7 +146,7 @@ class PictureUrl:
 
     def __post_init__(self):
         validate("picture url", self.value, min_len=0, max_len=60,
-                 custom=pattern(r"^(https\:\/\/imgur\.com\/[a-zA-Z0-9_]+\.(jpeg|png|jpg))?$"))
+                 custom=pattern(r"^(https\:\/\/i\.imgur\.com\/[a-zA-Z0-9_]+\.(jpeg|png|jpg))?$"))
 
     def is_default(self):
         return self.value == ""
@@ -187,37 +187,65 @@ class Dog:
 
     def __init__(self, id: DogId, dog_birth_info: DogBirthInfo, entry_date: Date, neutered: bool, create_key: Any):
         validate("creation_key", create_key, custom=Dog.Builder.is_valid_key)
-        self.dog_id: DogId = id
-        self.birth_info: DogBirthInfo = dog_birth_info
-        self.entry_date: Date = entry_date
-        self.neutered: bool = neutered
-        self.name: Dogname = Dogname()
-        self.description: DogDescription = DogDescription()
-        self.picture: PictureUrl = PictureUrl()
+        self.__dog_id: DogId = id
+        self.__birth_info: DogBirthInfo = dog_birth_info
+        self.__entry_date: Date = entry_date
+        self.__neutered: bool = neutered
+        self.__name: Dogname = Dogname()
+        self.__description: DogDescription = DogDescription()
+        self.__picture: PictureUrl = PictureUrl()
+
+    @property
+    def dog_id(self):
+        return self.__dog_id
+
+    @property
+    def birth_info(self):
+        return self.__birth_info
+
+    @property
+    def entry_date(self):
+        return self.__entry_date
+
+    @property
+    def neutered(self):
+        return self.__neutered
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def description(self):
+        return self.__description
+
+    @property
+    def picture(self):
+        return self.__picture
 
     def _add_description(self, description: DogDescription,create_key:Any):
         validate("add description with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.description = description
+        self.__description = description
 
     def _add_picture(self, picture: PictureUrl, create_key:Any):
         validate("add picture with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.picture = picture
+        self.__picture = picture
 
     def _is_entry_after_birth(self) -> bool:
         return self.birth_info.birth_date <= self.entry_date
 
     def _add_name(self, dogname: Dogname, create_key: Any):
         validate("add dogname with builder", create_key, custom=Dog.Builder.is_valid_key)
-        self.name = dogname
+        self.__name = dogname
 
     def has_name(self) -> bool:
-        return  self.name != Dogname()
+        return self.__name != Dogname()
 
     def has_description(self) -> bool:
-        return self.description != DogDescription()
+        return self.__description != DogDescription()
 
     def has_picture(self) -> bool:
-        return self.picture != PictureUrl()
+        return self.__picture != PictureUrl()
 
     def compact_representation(self):
         return f'{Utils.DOG_ID_PRINT}{self.dog_id.value}\n{self.birth_info.representation()}\n{Utils.DOG_ENTRY_DATE_PRINT}{self.entry_date}'

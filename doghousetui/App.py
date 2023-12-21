@@ -313,7 +313,6 @@ class App:
         except Exception:
             print(Utils.CONNECTION_ERROR)
             return
-        print(response.json())
         print(response.status_code)
         if response.status_code == 201:
             print(Utils.ADD_PREFERENCE_SUCCEEDED_MESSAGE)
@@ -368,7 +367,8 @@ class App:
 
     def create_dog_list_from_json(self, dogs) -> List[Dog]:
         all_dogs: List[Dog] = []
-        for dog_json in dogs:
+        for entry in dogs:
+            dog_json = entry['dog']
             try:
                 dog = self.create_dog_from_json(dog_json)
                 all_dogs.append(dog)

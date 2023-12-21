@@ -171,11 +171,11 @@ class TestBreed:
 
 class TestPictureUrl:
     def test_pictureurl_can_be_empty_or_correct_url(self):
-        for i in ["", "https://imgur.com/6755v.jpeg", "https://imgur.com/Ada6755nsv.png"]:
+        for i in ["", "https://i.imgur.com/6755v.jpeg", "https://i.imgur.com/Ada6755nsv.png"]:
             PictureUrl(i)
 
     def test_pictureurl_cannot_be_a_not_valid_url(self):
-        for i in ["aaahttps://imgur.com/6755vaaa", "https://imgur.com/6755v", "https://google.com/Ada6755nsv"]:
+        for i in ["aaahttps://i.imgur.com/6755vaaa", "https://i.imgur.com/6755v", "https://google.com/Ada6755nsv"]:
             with pytest.raises(ValidationError):
                 PictureUrl(i)
 
@@ -213,7 +213,7 @@ class TestDog:
 
     @pytest.fixture
     def valid_DogPicture(self):
-        return PictureUrl("https://imgur.com/Ada6755nsv.png")
+        return PictureUrl("https://i.imgur.com/Ada6755nsv.png")
 
     @pytest.fixture
     def valid_dogBuilder(self,valid_DogId, valid_DogBirthInfo, valid_entry_date):

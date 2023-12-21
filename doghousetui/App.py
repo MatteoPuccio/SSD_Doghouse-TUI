@@ -186,8 +186,10 @@ class App:
 
     def make_dogs_with_filters_request(self, breed_str: str, estimated_size_str: str, birthdate_lower_then_str: str,
                                        birthdate_greater_then_str: str) -> Response:
-        params_dict = self.pack_filters_params_(breed_str, estimated_size_str, birthdate_lower_then_str,
+        params_dict = self.pack_filters_params(breed_str, estimated_size_str, birthdate_lower_then_str,
                                                 birthdate_greater_then_str)
+        if len(params_dict) == 0:
+            return requests.get(Utils.API_SERVER_DOGS)
         return requests.get(Utils.API_SERVER_DOGS, params=params_dict)
 
     def make_dogs_request(self) -> Response:
@@ -288,15 +290,18 @@ class App:
 
     @staticmethod
     def __print_add_dog_error(json):
-        if 'non_field_errors' in json:
-            App.__print_error_message(json['non_field_errors'])
+        for key in json:
+            App.__print_error_message(json[key])
 
     @staticmethod
     def __print_registration_errors(json):
-        if 'non_field_errors' in json:
-            App.__print_error_message(json['non_field_errors'])
-        if 'username' in json:
-            App.__print_error_message(json['username'])
+        for key in json:
+            App.__print_error_message(json[key])
+        # if 'non_field_errors' in json:
+        #     App.__print_error_message(json['non_field_errors'])
+        # if 'username' in json:
+        #     App.__print_error_message(json['username'])
+
 
     def __show_preferences(self):
         try:
